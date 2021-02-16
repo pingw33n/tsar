@@ -41,7 +41,11 @@ enum class Token {
     PIPE,
     SEMI,
     SLASH,
-    STRING_LITERAL,
+    STRING_LIT,
+    STRING_LIT_END,
+    RAW_STRING_LIT_END,
+    STRING_LIT_SUBST_START,
+    STRING_LIT_SUBST_END,
     ;
 
     override fun toString(): String {
@@ -54,14 +58,11 @@ enum class Token {
             COMMA -> ","
             DOC_COMMENT -> "///"
             DOT -> "."
-            EOF -> "<EOF>"
             EQ -> "="
             EQ_EQ -> "=="
             EQ_GT -> "=>"
             GT -> ">"
             GT_EQ -> ">="
-            IDENT -> "<IDENT>"
-            INT_LITERAL -> "<INT_LITERAL>"
             KW_BREAK -> "break"
             KW_CONTINUE -> "continue"
             KW_FALSE -> "false"
@@ -86,7 +87,15 @@ enum class Token {
             PIPE -> "|"
             SEMI -> ";"
             SLASH -> "/"
-            STRING_LITERAL -> "<STRING_LITERAL>"
+            EOF,
+            IDENT,
+            INT_LITERAL,
+            STRING_LIT,
+            STRING_LIT_END,
+            RAW_STRING_LIT_END,
+            STRING_LIT_SUBST_START,
+            STRING_LIT_SUBST_END,
+            -> "<${this.name}>"
         }
     }}
 

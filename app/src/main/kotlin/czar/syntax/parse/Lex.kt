@@ -6,6 +6,7 @@ import czar.syntax.S
 import czar.syntax.Source
 import czar.syntax.Span
 import czar.syntax.hir.Ident
+import czar.unreachable
 
 private const val BUF_CAP = 3
 private const val EOF = '\u0000'
@@ -16,9 +17,21 @@ private enum class IdentKind {
     RAW,
 }
 
+internal sealed class Mode(val start: Int) {
+    var level: Int = 0;
+
+    class Normal(start: Int): Mode(start)
+    class StringLit(start: Int, val rawLen: Int?): Mode(start)
+    class StringLitSubst(start: Int): Mode(start)
+}
+
 internal class Lex(val src: Source, val diag: Diag) {
     private var pos: Int = 0
     private val buf: MutableList<S<Token>> = mutableListOf()
+    private val modeStack: MutableList<Mode> = mutableListOf()
+    init {
+        modeStack.add(Mode.Normal(0))
+    }
 
     fun next(): S<Token> {
         val r = nth(0)
@@ -39,7 +52,7 @@ internal class Lex(val src: Source, val diag: Diag) {
         return Ident(if (raw) t.subSequence(2, t.length) else t)
     }
 
-    fun stringLiteral(span: Span): Sequence<CharSequence> {
+    fun stringLit(span: Span): Sequence<CharSequence> {
         val rawLen = if (src.text[span.start] == 'r') {
             var v = 0
             while (v < src.text.length && src.text[span.start + 1 + v] == RAW_MARKER) {
@@ -49,50 +62,106 @@ internal class Lex(val src: Source, val diag: Diag) {
         } else {
             null
         }
-        val payload = Span(span.start + if (rawLen == null) 1 else rawLen + 2,
-            span.end - 1 - (rawLen ?: 0))
-        require(src.text[payload.start - 1] == '"' && src.text[payload.end] == '"')
+        val payload = Span(span.start + if (rawLen == null) 1 else rawLen + 2, span.end)
+        check(src.text[payload.start - 1] == '"')
         val t = text(payload)
         return if (rawLen == null) {
-            sequence {
-                var i = 0
-                while (i < t.length) {
-                    when (t[i]) {
-                        '\r' -> {
-                            i += 1
-                            yield("\n")
-                        }
-                        '\\' -> {
-                            val s = when (t[i + 1]) {
-                                'b' -> "\b"
-                                'n' -> "\n"
-                                'r' -> "\r"
-                                't' -> "\t"
-                                'u' -> {
-                                    val (s, inc) = unicodeEscape(payload.start + i + 2, t.subSequence(i + 2, t.length))
-                                    i += inc
-                                    s
-                                }
-                                '\'' -> "'"
-                                '"' -> "\""
-                                '\\' -> "\\"
-                                else -> {
-                                    error(Span(payload.start + i, payload.start + i + 2), "invalid escape")
-                                    t.subSequence(i + 1, i + 2).toString()
-                                }
-                            }
-                            if (s.isNotEmpty()) {
-                                yield(s)
-                            }
-                            i += 1
-                        }
-                        else -> yield(t.subSequence(i, i + 1))
-                    }
-                    i += 1
-                }
-            }
+            unescape(t, payload.start)
         } else {
             sequenceOf(t)
+        }
+    }
+
+    fun stringLitEnd(tok: S<Token>): Sequence<CharSequence> {
+        require(tok.value == Token.STRING_LIT_END || tok.value == Token.RAW_STRING_LIT_END)
+        val start: Int
+        val rawLen = if (tok.value == Token.RAW_STRING_LIT_END) {
+            var rawLen = 0
+            while (src.text[tok.span.end - rawLen - 1] != '"') {
+                rawLen += 1
+            }
+            start = if (tok.span.length > 1 &&
+                    src.text[tok.span.start] == 'r' &&
+                    src.text[tok.span.start + rawLen + 1] == '"' &&
+                    (1..rawLen).all { src.text[tok.span.start + it] == RAW_MARKER }) {
+                rawLen + 2
+            } else {
+                0
+            }
+            rawLen
+        } else {
+            start = if (tok.span.length > 1 && src.text[tok.span.start] == '"') {
+                1
+            } else {
+                0
+            }
+            null
+        }
+        val payload = Span(tok.span.start + start, tok.span.end - (rawLen ?: 0) - 1)
+        check(src.text[payload.end] == '"')
+        val t = text(payload)
+        return if (rawLen == null) {
+            unescape(t, payload.start)
+        } else {
+            sequenceOf(t)
+        }
+    }
+
+    fun stringLitSubstEnd(span: Span): CharSequence {
+        val start = if (src.text[span.start] == ':') {
+            1
+        } else {
+            check(span.length == 1)
+            0
+        }
+        check(src.text[span.end - 1] == '}')
+        return text(Span(span.start + start, span.end - 1))
+    }
+
+    fun docComment(span: Span): CharSequence {
+        TODO()
+    }
+
+    private fun unescape(s: CharSequence, start: Int): Sequence<CharSequence> {
+        return sequence {
+            var i = 0
+            while (i < s.length) {
+                val chars = when (s[i]) {
+                    '\r' -> {
+                        i += 1
+                        "\n"
+                    }
+                    '\\' -> {
+                        val chars = when (s[i + 1]) {
+                            'b' -> "\b"
+                            'n' -> "\n"
+                            'r' -> "\r"
+                            't' -> "\t"
+                            'u' -> {
+                                val (unescaped, inc) = unicodeEscape(start + i + 2, s.subSequence(i + 2, s.length))
+                                i += inc
+                                unescaped
+                            }
+                            '\'' -> "'"
+                            '"' -> "\""
+                            '\\' -> "\\"
+                            '{' -> "{"
+                            else -> {
+                                error(Span(start + i, start + i + 2), "invalid escape")
+                                s.subSequence(i + 1, i + 2).toString()
+                            }
+                        }
+                        i += 1
+                        chars
+                    }
+                    '{' -> unreachable()
+                    else -> s.subSequence(i, i + 1)
+                }
+                i += 1
+                if (chars.isNotEmpty()) {
+                    yield(chars)
+                }
+            }
         }
     }
 
@@ -120,8 +189,8 @@ internal class Lex(val src: Source, val diag: Diag) {
         return Pair(res, endMarker + 1)
     }
 
-    fun docComment(span: Span): CharSequence {
-        TODO()
+    private fun mode(): Mode {
+        return modeStack.last()
     }
 
     private fun text(span: Span): CharSequence {
@@ -143,24 +212,89 @@ internal class Lex(val src: Source, val diag: Diag) {
     private fun fillBuf() {
         while (buf.size < BUF_CAP) {
             val tok = scan()
-            if (tok?.value != null) {
+            if (tok != null) {
                 buf.add(tok)
             }
         }
     }
 
     private fun scan(): S<Token>? {
+        if (mode() is Mode.StringLit) {
+            return if (nthChar(0) == '{') {
+                val tok = S(Span(pos, pos + 1), Token.STRING_LIT_SUBST_START)
+                nextChar()
+                modeStack.add(Mode.StringLitSubst(tok.span.start))
+                tok
+            } else {
+                stringLitNext()
+            }
+        }
+
         val start = pos
         var identKind: IdentKind? = null
+        var tok2: Token? = null
         val tok = when (val c = nextChar()) {
             EOF -> Token.EOF
-            '{' -> Token.BRACE_OPEN
-            '}' -> Token.BRACE_CLOSE
-            '[' -> Token.BRACKET_OPEN
-            ']' -> Token.BRACKET_CLOSE
-            '(' -> Token.PAREN_OPEN
-            ')' -> Token.PAREN_CLOSE
-            ':' -> Token.COLON
+            '{' -> {
+                mode().level += 1
+                Token.BRACE_OPEN
+            }
+            '}' -> {
+                val mode = mode()
+                when (mode) {
+                    is Mode.Normal -> {
+                        mode().level -= 1
+                        Token.BRACE_CLOSE
+                    }
+                    is Mode.StringLit -> unreachable()
+                    is Mode.StringLitSubst -> {
+                        if (mode.level == 0) {
+                            modeStack.removeLast()
+                            check(mode() is Mode.StringLit)
+                            Token.STRING_LIT_SUBST_END
+                        } else {
+                            Token.BRACE_CLOSE
+                        }
+                    }
+                }
+            }
+            '[' -> {
+                mode().level += 1
+                Token.BRACKET_OPEN
+            }
+            ']' -> {
+                mode().level -= 1
+                Token.BRACKET_CLOSE
+            }
+            '(' -> {
+                mode().level += 1
+                Token.PAREN_OPEN
+            }
+            ')' -> {
+                mode().level -= 1
+                Token.PAREN_CLOSE
+            }
+            ':' -> {
+                val mode = mode()
+                when (mode) {
+                    is Mode.Normal -> Token.COLON
+                    is Mode.StringLit -> unreachable()
+                    is Mode.StringLitSubst -> {
+                        if (mode.level == 0) {
+                            val end = src.text.indexOf('}', pos)
+                            if (end == -1) {
+                                fatal(Span(mode.start, src.text.length), "unterminated string subst")
+                            }
+                            pos = end + 1
+                            modeStack.removeLast()
+                            check(mode() is Mode.StringLit)
+                            Token.STRING_LIT_SUBST_END
+                        } else {
+                            Token.COLON
+                        }
+                    }
+                }
+            }
             ',' -> Token.COMMA
             '.' -> Token.DOT
             '=' -> when (nthChar(0)) {
@@ -197,7 +331,7 @@ internal class Lex(val src: Source, val diag: Diag) {
                     false
                 }
             } -> return null
-            ifChar(c) { stringLiteral(c, start) } -> Token.STRING_LITERAL
+            ifChar(c) { tok2 = stringLitStart(c, start); tok2 != null } -> tok2!!
             ifChar(c) { intLiteral(c) } -> Token.INT_LITERAL
             ifChar(c) {
                 identKind = ident(c)
@@ -269,7 +403,7 @@ internal class Lex(val src: Source, val diag: Diag) {
         return kind
     }
 
-    private fun stringLiteral(c: Char, start: Int): Boolean {
+    private fun stringLitStart(c: Char, start: Int): Token? {
         val rawLen = if (c == 'r' && (nthChar(0) == '"' ||
                     nthChar(0) == RAW_MARKER && (nthChar(1) == RAW_MARKER || nthChar(1) == '"'))) {
             var v = 0
@@ -285,21 +419,46 @@ internal class Lex(val src: Source, val diag: Diag) {
         } else if (c == '"') {
             null
         } else {
-            return false
+            return null
         }
 
+        modeStack.add(Mode.StringLit(start, rawLen))
+
+        return scanString()
+    }
+
+    private fun stringLitNext(): S<Token> {
+        val start = pos
+        val tok = scanString()
+        return S(Span(start, pos), tok)
+    }
+
+    private fun scanString(): Token {
+        val mode = mode() as Mode.StringLit
+        val substs = mode.rawLen == null
+
         while (true) {
+            if (substs && nthChar(0) == '{') {
+                return Token.STRING_LIT
+            }
             when (nextChar()) {
-                EOF -> fatal(Span(start, pos), "unterminated string")
+                EOF -> fatal(Span(mode.start, pos), "unterminated string")
                 '"' -> {
-                    val end = rawLen == null || rawLen == 0 ||
-                        ((rawLen - 1) downTo 0).all { nthChar(it) == RAW_MARKER }
+                    val end = mode.rawLen == null || mode.rawLen == 0 ||
+                        ((mode.rawLen - 1) downTo 0).all { nthChar(it) == RAW_MARKER }
                     if (end) {
-                        pos += rawLen ?: 0
-                        break
+                        pos += mode.rawLen ?: 0
+                        modeStack.removeLast()
+                        return if (mode.rawLen == null) Token.STRING_LIT_END else Token.RAW_STRING_LIT_END
                     }
                 }
-                '\\' -> if (rawLen == null) nextChar()
+                '\\' -> if (mode.rawLen == null) {
+                    // Skip \u{
+                    if (nextChar() == 'u') {
+                        nextChar()
+                    }
+
+                }
                 '\r' -> when (nextChar()) {
                     EOF -> {} // report as unterminated
                     '\n' -> {}
@@ -307,7 +466,6 @@ internal class Lex(val src: Source, val diag: Diag) {
                 }
             }
         }
-        return true
     }
 
     private fun intLiteral(c: Char): Boolean {
