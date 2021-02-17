@@ -25,7 +25,7 @@ internal sealed class Mode(val start: Int) {
     class StringLitSubst(start: Int): Mode(start)
 }
 
-internal class Lex(val src: Source, val diag: Diag) {
+internal class Lexer(val src: Source, val diag: Diag) {
     private var pos: Int = 0
     private val buf: MutableList<S<Token>> = mutableListOf()
     private val modeStack: MutableList<Mode> = mutableListOf()

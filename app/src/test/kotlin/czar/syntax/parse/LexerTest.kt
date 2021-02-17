@@ -12,7 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import java.nio.file.Path
 
 @ExtendWith(AutoExpect::class)
-class LexTest {
+class LexerTest {
     @TestFactory
     internal fun parseOk() = listOf(
         "" to "",
@@ -57,7 +57,7 @@ class LexTest {
 
     private fun parseOk(inp: String, exp: String) {
         val diag = Diag()
-        val lex = Lex(Source(inp, Path.of("test")), diag)
+        val lex = Lexer(Source(inp, Path.of("test")), diag)
         var first = true
         val act = StringBuilder()
         while (true) {
@@ -78,17 +78,17 @@ class LexTest {
         assertEquals(exp, act.toString())
     }
 
-    private fun toString(lex: Lex, tok: S<Token>): String? {
+    private fun toString(lexer: Lexer, tok: S<Token>): String? {
         return when (tok.value) {
             Token.EOF -> null
 
-            Token.IDENT -> "r#${lex.ident(tok.span)}"
+            Token.IDENT -> "r#${lexer.ident(tok.span)}"
             Token.INT_LITERAL -> TODO()
 
-            Token.STRING_LIT -> "S{${lex.stringLit(tok.span).joinToString("")}}"
-            Token.STRING_LIT_END, Token.RAW_STRING_LIT_END -> "E{${lex.stringLitEnd(tok).joinToString("")}}"
+            Token.STRING_LIT -> "S{${lexer.stringLit(tok.span).joinToString("")}}"
+            Token.STRING_LIT_END, Token.RAW_STRING_LIT_END -> "E{${lexer.stringLitEnd(tok).joinToString("")}}"
             Token.STRING_LIT_SUBST_START -> "{SS}"
-            Token.STRING_LIT_SUBST_END -> "SE{${lex.stringLitSubstEnd(tok.span)}}"
+            Token.STRING_LIT_SUBST_END -> "SE{${lexer.stringLitSubstEnd(tok.span)}}"
             Token.NL -> "{NL}"
 
             Token.BRACE_CLOSE,
@@ -133,7 +133,7 @@ class LexTest {
 
     private fun parseFail(id: String, inp: String) {
         val diag = Diag()
-        val lex = Lex(Source(inp, Path.of("test")), diag)
+        val lex = Lexer(Source(inp, Path.of("test")), diag)
         try {
             while (true) {
                 val tok = lex.next()
