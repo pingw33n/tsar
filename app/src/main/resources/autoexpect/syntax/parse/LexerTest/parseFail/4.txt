@@ -1,4 +1,4 @@
-error: unterminated string
+error: unterminated string literal
   --> test:2:1
 2 | "str
     ~~~~

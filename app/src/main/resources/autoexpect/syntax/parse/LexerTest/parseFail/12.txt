@@ -1,0 +1,4 @@
+error: unterminated character literal
+  --> test:1:1
+1 | 'foobar
+    ~~~~~~~

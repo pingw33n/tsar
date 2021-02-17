@@ -10,6 +10,7 @@ enum class Token {
     BRACE_OPEN,
     BRACKET_CLOSE,
     BRACKET_OPEN,
+    CHAR_LIT,
     COLON,
     COLON2,
     COMMA,
@@ -182,6 +183,8 @@ enum class Token {
             SLASH_EQ -> "/="
             STAR -> "*"
             STAR_EQ -> "*="
+
+            CHAR_LIT,
             EOF,
             IDENT,
             STRING_LIT,

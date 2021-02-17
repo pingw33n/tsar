@@ -17,6 +17,7 @@ class LexerTest {
     @TestFactory
     internal fun parseOk() = listOf(
         "" to "",
+        "\u0009\u000B\u000C\u0020" to "",
         "{}[]():,.=<==== < => >;/|\n\r\n\u0009\u000B\u000C\u0020i dent r#break break" to
                 "{ } [ ] ( ) : , . = <= == = < => > ; / | {NL} {NL} r#i r#dent r#break break",
         """ "" "_" "\t\b\n\r\'\"\\" """ to "E{} E{_} E{\t\b\n\r'\"\\}",
@@ -33,7 +34,8 @@ class LexerTest {
         """ r"{}" r###"##{###}#"### """ to "E{{}} E{##{###}#}",
         "//\n\r\n" to "{NL} {NL}",
         "/*\n\r\n*/" to "",
-        "foo // bar  \n  foo ( /* bar (/* !!! */) )\r\n*/)" to "r#foo {NL} r#foo ( )"
+        "foo // bar  \n  foo ( /* bar (/* !!! */) )\r\n*/)" to "r#foo {NL} r#foo ( )",
+        "'a'' ''\t''\b''\\u{10fffF}'" to "C{61} C{20} C{9} C{8} C{10ffff}",
         ).mapIndexed { i, (inp, exp) ->
             dynamicTest("$i") {
                 parseOk(inp, exp)
@@ -53,6 +55,9 @@ class LexerTest {
         "foo/*/*\nbar*/",
         """ "{:" """,
         """ "\a\ \z\u\u{\u{ag}\u{d800}\u{dfff}\u{110000}\u{fffffffffffffffffffff}" """,
+        "'",
+        "'foobar",
+        "'''abcd''\n''foo\nbar\r\n'",
         ).mapIndexed { i, inp ->
             dynamicTest("$i") {
                 parseFail(i.toString(), inp)
@@ -63,6 +68,7 @@ class LexerTest {
     internal fun tokens() {
         for (tok in Token.values()) {
             val inp = when (tok) {
+                Token.CHAR_LIT -> "'a'"
                 Token.EOF -> ""
                 Token.IDENT -> "main"
                 Token.NL -> "\n"
@@ -118,6 +124,7 @@ class LexerTest {
             Token.STRING_LIT_SUBST_START -> "{SS}"
             Token.STRING_LIT_SUBST_END -> "SE{${lexer.stringLitSubstEnd(tok.span)}}"
             Token.NL -> "{NL}"
+            Token.CHAR_LIT -> "C{${lexer.charLit(tok.span).toString(16)}}"
 
             Token.BRACE_CLOSE,
             Token.BRACE_OPEN,

@@ -1,0 +1,29 @@
+error: invalid character literal
+  --> test:1:1
+1 | '''abcd''
+    ~~
+
+error: invalid character literal
+  --> test:1:3
+1 | '''abcd''
+      ~~~~~~
+
+error: newline must be escaped inside character literal
+  --> test:1:10
+1 | '''abcd''
+             ~
+
+error: invalid character literal
+  --> test:2:2
+2 | ''foo
+     ~~~~
+
+error: newline must be escaped inside character literal
+  --> test:2:6
+2 | ''foo
+         ~
+
+error: newline must be escaped inside character literal
+  --> test:3:4
+3 | bar
+       ~

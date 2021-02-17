@@ -118,6 +118,24 @@ internal class Lexer(val src: Source, val diag: Diag) {
         return text(Span(span.start + start, span.end - 1))
     }
 
+    fun charLit(span: Span): Int {
+        val payload = Span(span.start + 1, span.end - 1)
+        check(src.text[payload.start - 1] == '\'' && src.text[payload.end] == '\'')
+        val t = text(payload)
+        val s = unescape(t, payload.start).joinToString("")
+        val cps = s.codePoints().iterator()
+        if (!cps.hasNext()) {
+            error(span, "invalid character literal")
+            return 0
+        }
+        val r = cps.next()
+        if (cps.hasNext()) {
+            error(span, "invalid character literal")
+            return 0
+        }
+        return r
+    }
+
     private fun unescape(s: CharSequence, start: Int): Sequence<CharSequence> {
         return sequence {
             var i = 0
@@ -465,6 +483,7 @@ internal class Lexer(val src: Source, val diag: Diag) {
                 }
             } -> return null
             ifChar(c) { tok2 = stringLitStart(c, start); tok2 != null } -> tok2!!
+            ifChar(c) { charLit(c, start) } -> Token.CHAR_LIT
             ifChar(c) {
                 identKind = ident(c)
                 identKind != null
@@ -480,13 +499,14 @@ internal class Lexer(val src: Source, val diag: Diag) {
         return S(Span(start, pos), tok)
     }
 
-    private fun maybeChar(c: Char): Boolean {
-        return if (nthChar(0) == c) {
-            nextChar()
-            true
-        } else {
-            false
+    private fun charLit(c: Char, start: Int): Boolean {
+        if (c != '\'') {
+            return false
         }
+
+        scanChars(charLit = true, false, null, start)
+
+        return true
     }
 
     private fun keywordOrIdent(start: Int, identKind: IdentKind): Token {
@@ -603,32 +623,49 @@ internal class Lexer(val src: Source, val diag: Diag) {
         val mode = mode() as Mode.StringLit
         val substs = mode.rawLen == null
 
+        return scanChars(charLit = false, substs, mode.rawLen, mode.start)
+    }
+
+    private fun scanChars(charLit: Boolean, substs: Boolean, rawLen: Int?, start: Int): Token {
+        val delim = if (charLit) '\'' else '"'
         while (true) {
             if (substs && nthChar(0) == '{') {
-                return Token.STRING_LIT
+                return if (charLit) Token.CHAR_LIT else Token.STRING_LIT
             }
             when (nextChar()) {
-                EOF -> fatal(Span(mode.start, pos), "unterminated string")
-                '"' -> {
-                    val end = mode.rawLen == null || mode.rawLen == 0 ||
-                        ((mode.rawLen - 1) downTo 0).all { nthChar(it) == RAW_MARKER }
+                EOF -> fatal(Span(start, pos), "unterminated ${if (charLit) "character" else "string"} literal")
+                delim -> {
+                    val end = rawLen == null || rawLen == 0 ||
+                        ((rawLen - 1) downTo 0).all { nthChar(it) == RAW_MARKER }
                     if (end) {
-                        pos += mode.rawLen ?: 0
-                        modeStack.removeLast()
-                        return if (mode.rawLen == null) Token.STRING_LIT_END else Token.RAW_STRING_LIT_END
+                        pos += rawLen ?: 0
+                        return if (charLit) {
+                            Token.CHAR_LIT
+                        } else {
+                            modeStack.removeLast()
+                            if (rawLen == null) Token.STRING_LIT_END else Token.RAW_STRING_LIT_END
+                        }
                     }
                 }
-                '\\' -> if (mode.rawLen == null) {
+                '\\' -> if (rawLen == null) {
                     // Skip \u{
                     if (nextChar() == 'u' && nthChar(0) == '{') {
                         nextChar()
                     }
 
                 }
-                '\r' -> when (nextChar()) {
-                    EOF -> {} // report as unterminated
-                    '\n' -> {}
-                    else -> fatal(Span(pos - 1, pos), "invalid line ending");
+                '\r' -> {
+                    when (nextChar()) {
+                        EOF -> {} // report as unterminated
+                        '\n' -> {}
+                        else -> fatal(Span.one(pos - 1), "invalid line ending");
+                    }
+                    if (charLit) {
+                        error(Span.one(pos - 2), "newline must be escaped inside character literal")
+                    }
+                }
+                '\n' -> if (charLit) {
+                    error(Span.one(pos - 1), "newline must be escaped inside character literal")
                 }
             }
         }

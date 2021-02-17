@@ -4,6 +4,7 @@ import czar.syntax.Source
 import czar.syntax.Span
 import java.io.StringWriter
 import java.nio.file.Path
+import kotlin.math.max
 
 data class Report(
     val source: Source,
@@ -129,7 +130,7 @@ private data class HiLine(
 
         val hi_start = line_num_width + 3 + col_start;
         out.append(" ".repeat(hi_start))
-        out.append("~".repeat(col_len))
+        out.append("~".repeat(max(col_len, 1)))
         out.append("\n")
     }
 }
