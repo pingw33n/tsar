@@ -1,0 +1,49 @@
+error: invalid escape
+  --> test:1:3
+1 |  "\a\ \z\u\u{\u{ag}\u{d800}\u{dfff}\u{110000}\u{fffffffffffffffffffff}" 
+      ~~
+
+error: invalid escape
+  --> test:1:5
+1 |  "\a\ \z\u\u{\u{ag}\u{d800}\u{dfff}\u{110000}\u{fffffffffffffffffffff}" 
+        ~~
+
+error: invalid escape
+  --> test:1:7
+1 |  "\a\ \z\u\u{\u{ag}\u{d800}\u{dfff}\u{110000}\u{fffffffffffffffffffff}" 
+          ~~
+
+error: expected '{'
+  --> test:1:11
+1 |  "\a\ \z\u\u{\u{ag}\u{d800}\u{dfff}\u{110000}\u{fffffffffffffffffffff}" 
+              ~
+
+error: expected unicode code point
+  --> test:1:14
+1 |  "\a\ \z\u\u{\u{ag}\u{d800}\u{dfff}\u{110000}\u{fffffffffffffffffffff}" 
+                 ~
+
+error: expected '}'
+  --> test:1:18
+1 |  "\a\ \z\u\u{\u{ag}\u{d800}\u{dfff}\u{110000}\u{fffffffffffffffffffff}" 
+                     ~
+
+error: invalid unicode code point
+  --> test:1:23
+1 |  "\a\ \z\u\u{\u{ag}\u{d800}\u{dfff}\u{110000}\u{fffffffffffffffffffff}" 
+                          ~~~~
+
+error: invalid unicode code point
+  --> test:1:31
+1 |  "\a\ \z\u\u{\u{ag}\u{d800}\u{dfff}\u{110000}\u{fffffffffffffffffffff}" 
+                                  ~~~~
+
+error: invalid unicode code point
+  --> test:1:39
+1 |  "\a\ \z\u\u{\u{ag}\u{d800}\u{dfff}\u{110000}\u{fffffffffffffffffffff}" 
+                                          ~~~~~~
+
+error: invalid unicode code point
+  --> test:1:49
+1 |  "\a\ \z\u\u{\u{ag}\u{d800}\u{dfff}\u{110000}\u{fffffffffffffffffffff}" 
+                                                    ~~~~~~~~~~~~~~~~~~~~~

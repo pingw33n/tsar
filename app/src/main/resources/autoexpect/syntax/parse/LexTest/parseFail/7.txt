@@ -1,0 +1,4 @@
+error: unterminated comment
+  --> test:1:4
+1 | foo/*
+       ~~

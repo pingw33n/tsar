@@ -3,11 +3,15 @@ package czar.syntax.parse
 import czar.diag.Diag
 import czar.syntax.S
 import czar.syntax.Source
+import czar.test.AutoExpect
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.TestFactory
+import org.junit.jupiter.api.extension.ExtendWith
 import java.nio.file.Path
 
+@ExtendWith(AutoExpect::class)
 class LexTest {
     @TestFactory
     internal fun parseOk() = listOf(
@@ -32,7 +36,26 @@ class LexTest {
             }
         }
 
-    fun parseOk(inp: String, exp: String) {
+    @TestFactory
+    internal fun parseFail() = listOf(
+        "\r",
+        "foo\n\r",
+        "\uD83E\uDD70",
+        "\"",
+        "\n\"str\ning",
+        "\"\r",
+        "foo/*",
+        "foo/*\nbar",
+        "foo/*/*\nbar*/",
+        """ "{:" """,
+        """ "\a\ \z\u\u{\u{ag}\u{d800}\u{dfff}\u{110000}\u{fffffffffffffffffffff}" """,
+        ).mapIndexed { i, inp ->
+            dynamicTest("$i") {
+                parseFail(i.toString(), inp)
+            }
+        }
+
+    private fun parseOk(inp: String, exp: String) {
         val diag = Diag()
         val lex = Lex(Source(inp, Path.of("test")), diag)
         var first = true
@@ -51,7 +74,7 @@ class LexTest {
             }
             act.append(s)
         }
-        assert(diag.reports.isEmpty()) { diag.toString() }
+        assertTrue(diag.reports.isEmpty()) { diag.toString() }
         assertEquals(exp, act.toString())
     }
 
@@ -106,5 +129,21 @@ class LexTest {
             Token.SLASH,
             -> tok.value.toString()
         }
+    }
+
+    private fun parseFail(id: String, inp: String) {
+        val diag = Diag()
+        val lex = Lex(Source(inp, Path.of("test")), diag)
+        try {
+            while (true) {
+                val tok = lex.next()
+                if (tok.value == Token.EOF) {
+                    break
+                }
+                toString(lex, tok)
+            }
+        } catch (_: ParseException) {
+        }
+        AutoExpect.verify(id, diag.toString())
     }
 }

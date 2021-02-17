@@ -154,7 +154,6 @@ internal class Lex(val src: Source, val diag: Diag) {
                         i += 1
                         chars
                     }
-                    '{' -> unreachable()
                     else -> s.subSequence(i, i + 1)
                 }
                 i += 1
@@ -171,9 +170,20 @@ internal class Lex(val src: Source, val diag: Diag) {
             return Pair("", 0)
         }
 
-        val endMarker = s.indexOf('}', 1)
-        if (endMarker == -1) {
-            error(Span(start, start + s.length), "unterminated unicode escape")
+        var endMarker = 1
+        while (endMarker < s.length && isHexDigit(s[endMarker])) {
+            endMarker += 1
+        }
+        if (endMarker == 1) {
+            error(Span(start + 1, start + endMarker + 1), "expected unicode code point")
+            return Pair("", 0)
+        }
+        if (endMarker == s.length) {
+            error(Span(start, start + endMarker), "unterminated unicode escape")
+            return Pair("", 0)
+        }
+        if (s[endMarker] != '}') {
+            error(Span(start + endMarker, start + endMarker + 1), "expected '}'")
             return Pair("", 0)
         }
 
@@ -311,7 +321,6 @@ internal class Lex(val src: Source, val diag: Diag) {
             '<' -> if (maybeChar('=')) Token.LT_EQ else Token.LT
             '>' -> if (maybeChar('=')) Token.GT_EQ else Token.GT
             ';' -> Token.SEMI
-            '/' -> Token.SLASH
             '|' -> Token.PIPE
             '\n' -> Token.NL
             '\r' -> {
@@ -323,6 +332,7 @@ internal class Lex(val src: Source, val diag: Diag) {
             ifChar(c) { docComment(c) } -> Token.DOC_COMMENT
             ifChar(c) { lineComment(c) } -> return null
             ifChar(c) { blockComment(c, start) } -> return null
+            '/' -> Token.SLASH
             ifChar(c) {
                 if (isWhitespace(c)) {
                     advanceWhile(::isWhitespace);
@@ -341,7 +351,7 @@ internal class Lex(val src: Source, val diag: Diag) {
                 if (isEof()) {
                     Token.EOF
                 } else {
-                    fatal(Span(start, pos), "invalid char")
+                    fatal(Span(start, pos), "invalid character")
                 }
             }
         }
@@ -454,7 +464,7 @@ internal class Lex(val src: Source, val diag: Diag) {
                 }
                 '\\' -> if (mode.rawLen == null) {
                     // Skip \u{
-                    if (nextChar() == 'u') {
+                    if (nextChar() == 'u' && nthChar(0) == '{') {
                         nextChar()
                     }
 
@@ -542,7 +552,7 @@ internal class Lex(val src: Source, val diag: Diag) {
         var depth = 1
         while (true) {
             val c = nextChar()
-            val c2 = nextChar()
+            val c2 = nthChar(0)
             when {
                 c == '/' && c2 == '*' -> {
                     nextChar()
@@ -593,4 +603,8 @@ private fun isWhitespace(c: Char): Boolean {
         -> true
         else -> false
     }
+}
+
+private fun isHexDigit(c: Char): Boolean {
+     return c in '0'..'9' || c in 'a'..'f' || c in 'A'..'F'
 }

@@ -1,0 +1,4 @@
+error: unterminated string
+  --> test:1:1
+1 | "
+    ~~
