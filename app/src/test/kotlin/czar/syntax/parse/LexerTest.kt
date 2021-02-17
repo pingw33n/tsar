@@ -7,6 +7,7 @@ import czar.test.AutoExpect
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DynamicTest.dynamicTest
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.extension.ExtendWith
 import java.nio.file.Path
@@ -57,6 +58,19 @@ class LexerTest {
                 parseFail(i.toString(), inp)
             }
         }
+
+    @Test
+    internal fun keywords() {
+        for (tok in Token.values()) {
+            if (tok.name.startsWith("KW_")) {
+                val diag = Diag()
+                val lex = Lexer(Source(tok.toString(), Path.of("test")), diag)
+                assertTrue(diag.reports.isEmpty()) { diag.toString() }
+                assertEquals(tok, lex.next().value)
+                assertEquals(Token.EOF, lex.next().value)
+            }
+        }
+    }
 
     private fun parseOk(inp: String, exp: String) {
         val diag = Diag()
@@ -130,6 +144,27 @@ class LexerTest {
             Token.PIPE,
             Token.SEMI,
             Token.SLASH,
+            Token.KW_AS,
+            Token.KW_AS_BANG,
+            Token.KW_AS_QUEST,
+            Token.KW_AS_PERCENT,
+            Token.KW_CONST,
+            Token.KW_ELSE,
+            Token.KW_ENUM,
+            Token.KW_IF,
+            Token.KW_IS,
+            Token.KW_MATCH,
+            Token.KW_MODULE,
+            Token.KW_NOT,
+            Token.KW_PACKAGE,
+            Token.KW_RET,
+            Token.KW_STATIC,
+            Token.KW_STRUCT,
+            Token.KW_SUPER,
+            Token.KW_UNDERSCORE,
+            Token.KW_UNSAFE,
+            Token.KW_USE,
+            Token.KW_WHERE,
             -> tok.value.toString()
         }
     }

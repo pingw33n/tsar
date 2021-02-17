@@ -372,23 +372,57 @@ internal class Lexer(val src: Source, val diag: Diag) {
         if (identKind == IdentKind.RAW) {
             return Token.IDENT
         }
-        return when (ident) {
-            Ident("break") -> Token.KW_BREAK
-            Ident("continue") -> Token.KW_CONTINUE
-            Ident("false") -> Token.KW_FALSE
-            Ident("fn") -> Token.KW_FN
-            Ident("for") -> Token.KW_FOR
-            Ident("in") -> Token.KW_IN
-            Ident("impl") -> Token.KW_IMPL
-            Ident("loop") -> Token.KW_LOOP
-            Ident("mut") -> Token.KW_MUT
-            Ident("pub") -> Token.KW_PUB
-            Ident("self") -> Token.KW_SELF_LOWER
-            Ident("Self") -> Token.KW_SELF_UPPER
-            Ident("trait") -> Token.KW_TRAIT
-            Ident("true") -> Token.KW_TRUE
-            Ident("type") -> Token.KW_TYPE
-            Ident("while") -> Token.KW_WHILE
+        return when (ident.value) {
+            "break" -> Token.KW_BREAK
+            "continue" -> Token.KW_CONTINUE
+            "false" -> Token.KW_FALSE
+            "fn" -> Token.KW_FN
+            "for" -> Token.KW_FOR
+            "in" -> Token.KW_IN
+            "impl" -> Token.KW_IMPL
+            "loop" -> Token.KW_LOOP
+            "mut" -> Token.KW_MUT
+            "pub" -> Token.KW_PUB
+            "self" -> Token.KW_SELF_LOWER
+            "Self" -> Token.KW_SELF_UPPER
+            "trait" -> Token.KW_TRAIT
+            "true" -> Token.KW_TRUE
+            "type" -> Token.KW_TYPE
+            "while" -> Token.KW_WHILE
+            "as" -> {
+                when (nthChar(0)) {
+                    '!' -> {
+                        nextChar()
+                        Token.KW_AS_BANG
+                    }
+                    '?' -> {
+                        nextChar()
+                        Token.KW_AS_QUEST
+                    }
+                    '%' -> {
+                        nextChar()
+                        Token.KW_AS_PERCENT
+                    }
+                    else -> Token.KW_AS
+                }
+            }
+            "const" -> Token.KW_CONST
+            "else" -> Token.KW_ELSE
+            "enum" -> Token.KW_ENUM
+            "if" -> Token.KW_IF
+            "is" -> Token.KW_IS
+            "match" -> Token.KW_MATCH
+            "module" -> Token.KW_MODULE
+            "not" -> Token.KW_NOT
+            "package" -> Token.KW_PACKAGE
+            "ret" -> Token.KW_RET
+            "static" -> Token.KW_STATIC
+            "struct" -> Token.KW_STRUCT
+            "super" -> Token.KW_SUPER
+            "underscore" -> Token.KW_UNDERSCORE
+            "unsafe" -> Token.KW_UNSAFE
+            "use" -> Token.KW_USE
+            "where" -> Token.KW_WHERE
             else -> Token.IDENT
         }
     }

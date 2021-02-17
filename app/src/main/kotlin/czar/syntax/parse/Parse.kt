@@ -17,21 +17,42 @@ enum class Token {
     GT_EQ,
     IDENT,
     INT_LITERAL,
+    KW_AS,
+    KW_AS_BANG, // as!
+    KW_AS_PERCENT, // as%
+    KW_AS_QUEST, // as?
     KW_BREAK,
+    KW_CONST,
     KW_CONTINUE,
+    KW_ELSE,
+    KW_ENUM,
     KW_FALSE,
     KW_FN,
     KW_FOR,
+    KW_IF,
     KW_IMPL,
     KW_IN,
+    KW_IS,
     KW_LOOP,
+    KW_MATCH,
+    KW_MODULE,
     KW_MUT,
+    KW_NOT,
+    KW_PACKAGE,
     KW_PUB,
+    KW_RET,
     KW_SELF_LOWER,
     KW_SELF_UPPER,
+    KW_STATIC,
+    KW_STRUCT,
+    KW_SUPER,
     KW_TRAIT,
     KW_TRUE,
     KW_TYPE,
+    KW_UNDERSCORE,
+    KW_UNSAFE,
+    KW_USE,
+    KW_WHERE,
     KW_WHILE,
     LT,
     LT_EQ,
@@ -63,21 +84,42 @@ enum class Token {
             EQ_GT -> "=>"
             GT -> ">"
             GT_EQ -> ">="
+            KW_AS -> "as"
+            KW_AS_BANG -> "as!"
+            KW_AS_PERCENT -> "as%"
+            KW_AS_QUEST -> "as?"
             KW_BREAK -> "break"
+            KW_CONST -> "const"
             KW_CONTINUE -> "continue"
+            KW_ELSE -> "else"
+            KW_ENUM -> "enum"
             KW_FALSE -> "false"
             KW_FN -> "fn"
             KW_FOR -> "for"
+            KW_IF -> "if"
             KW_IMPL -> "impl"
             KW_IN -> "in"
+            KW_IS -> "is"
             KW_LOOP -> "loop"
+            KW_MATCH -> "match"
+            KW_MODULE -> "module"
             KW_MUT -> "mut"
+            KW_NOT -> "not"
+            KW_PACKAGE -> "package"
             KW_PUB -> "pub"
+            KW_RET -> "ret"
             KW_SELF_LOWER -> "self"
             KW_SELF_UPPER -> "Self"
+            KW_STATIC -> "static"
+            KW_STRUCT -> "struct"
+            KW_SUPER -> "super"
             KW_TRAIT -> "trait"
             KW_TRUE -> "true"
             KW_TYPE -> "type"
+            KW_UNDERSCORE -> "underscore"
+            KW_UNSAFE -> "unsafe"
+            KW_USE -> "use"
+            KW_WHERE -> "where"
             KW_WHILE -> "while"
             LT -> "<"
             LT_EQ -> "<="
