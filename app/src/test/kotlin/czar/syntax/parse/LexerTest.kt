@@ -22,7 +22,8 @@ class LexerTest {
         """ "" "_" "\t\b\n\r\'\"\\" """ to "E{} E{_} E{\t\b\n\r'\"\\}",
         """ "\u{0}\u{000000}\u{00d7ff}\u{e000}\u{10fffF}" """ to "E{\u0000\u0000\ud7ff\ue000\udbff\udfff}",
         """ r"" r#"\t\b\n\r\'\"\\"#  """ to """E{} E{\t\b\n\r\'\"\\}""",
-        "r##########\"\\t\\b\\n\\r\\'\\\"\\\\\r\n\"#########\"##########" to "E{\\t\\b\\n\\r\\'\\\"\\\\\r\n\"#########}",
+        "r##########\"\\t\\b\\n\\r\\'\\\"\\\\\r\n\r\"#########\"##########" to
+                "E{\\t\\b\\n\\r\\'\\\"\\\\\n\n\"#########}",
         """ "{}" """ to "S{} {SS} SE{} E{}",
         """ "a\r\n{}" """ to "S{a\r\n} {SS} SE{} E{}",
         """ "a\r\n{}\tb\b" """ to "S{a\r\n} {SS} SE{} E{\tb\b}",
@@ -35,16 +36,18 @@ class LexerTest {
         "/*\n\r\n*/" to "",
         "foo // bar  \n  foo ( /* bar (/* !!! */) )\r\n*/)" to "r#foo {NL} r#foo ( )",
         "'a'' ''\t''\b''\\u{10fffF}'" to "C{61} C{20} C{9} C{8} C{10ffff}",
+        "\n\r\r\n\n\r" to "{NL} {NL} {NL} {NL} {NL}",
+        "\"\n\r\r\n\n\r\"" to "E{\n\n\n\n\n}",
         ).mapIndexed { i, (inp, exp) ->
             dynamicTest("$i") {
-                parseOk(inp, exp)
+                parseOk(i, inp, exp)
             }
         }
 
     @TestFactory
     internal fun parseFail() = listOf(
-        "\r",
-        "foo\n\r",
+        null,
+        null,
         "\uD83E\uDD70",
         "\"",
         "\n\"str\ning",
@@ -59,10 +62,14 @@ class LexerTest {
         "'''abcd''\n''foo\nbar\r\n'",
         "r#_ r#self r#Self",
         ).mapIndexed { i, inp ->
-            dynamicTest("$i") {
-                parseFail(i.toString(), inp)
+            if (inp == null) {
+                null
+            } else {
+                dynamicTest("$i") {
+                    parseFail(i.toString(), inp)
+                }
             }
-        }
+        }.filterNotNull()
 
     @Test
     internal fun tokens() {
@@ -90,7 +97,7 @@ class LexerTest {
         }
     }
 
-    private fun parseOk(inp: String, exp: String) {
+    private fun parseOk(@Suppress("UNUSED") id: Int, inp: String, exp: String) {
         val diag = Diag()
         val lex = Lexer(Source(inp, Path.of("test")), diag)
         var first = true

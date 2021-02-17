@@ -65,11 +65,7 @@ internal class Lexer(val src: Source, val diag: Diag) {
         val payload = Span(span.start + if (rawLen == null) 1 else rawLen + 2, span.end)
         check(src.text[payload.start - 1] == '"')
         val t = text(payload)
-        return if (rawLen == null) {
-            unescape(t, payload.start)
-        } else {
-            sequenceOf(t)
-        }
+        return decodeString(t, payload.start, rawLen == null)
     }
 
     fun stringLitEnd(tok: S<Token>): Sequence<CharSequence> {
@@ -100,11 +96,7 @@ internal class Lexer(val src: Source, val diag: Diag) {
         val payload = Span(tok.span.start + start, tok.span.end - (rawLen ?: 0) - 1)
         check(src.text[payload.end] == '"')
         val t = text(payload)
-        return if (rawLen == null) {
-            unescape(t, payload.start)
-        } else {
-            sequenceOf(t)
-        }
+        return decodeString(t, payload.start, rawLen == null)
     }
 
     fun stringLitSubstEnd(span: Span): CharSequence {
@@ -122,7 +114,7 @@ internal class Lexer(val src: Source, val diag: Diag) {
         val payload = Span(span.start + 1, span.end - 1)
         check(src.text[payload.start - 1] == '\'' && src.text[payload.end] == '\'')
         val t = text(payload)
-        val s = unescape(t, payload.start).joinToString("")
+        val s = decodeString(t, payload.start, true).joinToString("")
         val cps = s.codePoints().iterator()
         if (!cps.hasNext()) {
             error(span, "invalid character literal")
@@ -136,16 +128,18 @@ internal class Lexer(val src: Source, val diag: Diag) {
         return r
     }
 
-    private fun unescape(s: CharSequence, start: Int): Sequence<CharSequence> {
+    private fun decodeString(s: CharSequence, start: Int, unescape: Boolean): Sequence<CharSequence> {
         return sequence {
             var i = 0
             while (i < s.length) {
                 val chars = when (s[i]) {
                     '\r' -> {
-                        i += 1
+                        if (s.getOrNull(i + 1) == '\n') {
+                            i += 1
+                        }
                         "\n"
                     }
-                    '\\' -> {
+                    '\\' -> if (unescape) {
                         val chars = when (s[i + 1]) {
                             'b' -> "\b"
                             'n' -> "\n"
@@ -167,6 +161,8 @@ internal class Lexer(val src: Source, val diag: Diag) {
                         }
                         i += 1
                         chars
+                    } else {
+                        s.subSequence(i, i + 1)
                     }
                     else -> s.subSequence(i, i + 1)
                 }
@@ -460,8 +456,8 @@ internal class Lexer(val src: Source, val diag: Diag) {
             }
             '\n' -> Token.NL
             '\r' -> {
-                if (nextChar() != '\n') {
-                    fatal(Span(start, pos), "invalid line ending")
+                if (nthChar(0) == '\n') {
+                    nextChar()
                 }
                 Token.NL
             }
@@ -659,13 +655,12 @@ internal class Lexer(val src: Source, val diag: Diag) {
 
                 }
                 '\r' -> {
-                    when (nextChar()) {
-                        EOF -> {} // report as unterminated
-                        '\n' -> {}
-                        else -> fatal(Span.one(pos - 1), "invalid line ending");
+                    val p = pos - 1
+                    if (nthChar(0) == '\n') {
+                        nextChar()
                     }
                     if (charLit) {
-                        error(Span.one(pos - 2), "newline must be escaped inside character literal")
+                        error(Span.one(p), "newline must be escaped inside character literal")
                     }
                 }
                 '\n' -> if (charLit) {

@@ -1,4 +1,0 @@
-error: invalid line ending
-  --> test:2:1
-2 | 
-    ~
