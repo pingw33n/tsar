@@ -1,22 +1,36 @@
 package czar.syntax.parse
 
 enum class Token {
+    AMP,
+    AMP2,
+    AMP_EQ,
+    BANG, // !
+    BANG_EQ,
     BRACE_CLOSE,
     BRACE_OPEN,
     BRACKET_CLOSE,
     BRACKET_OPEN,
     COLON,
+    COLON2,
     COMMA,
-    DOC_COMMENT,
+    DASH, // -
+    DASH_EQ,
+    DASH_GT,
     DOT,
+    DOT2_EQ,
+    DOT2,
+    DOT3,
     EOF,
     EQ,
     EQ_EQ,
     EQ_GT,
     GT,
+    GT2_EQ,
+    GT2,
     GT_EQ,
+    HAT, // ^
+    HAT_EQ,
     IDENT,
-    INT_LITERAL,
     KW_AS,
     KW_AS_BANG, // as!
     KW_AS_PERCENT, // as%
@@ -55,35 +69,62 @@ enum class Token {
     KW_WHERE,
     KW_WHILE,
     LT,
+    LT2_EQ,
+    LT2,
     LT_EQ,
     NL,
     PAREN_CLOSE,
     PAREN_OPEN,
+    PERCENT,
+    PERCENT_EQ,
     PIPE,
+    PIPE2,
+    PIPE_EQ,
+    PLUS,
+    PLUS_EQ,
+    QUEST, // ?
+    RAW_STRING_LIT_END,
     SEMI,
     SLASH,
+    SLASH_EQ,
+    STAR,
+    STAR_EQ,
     STRING_LIT,
     STRING_LIT_END,
-    RAW_STRING_LIT_END,
-    STRING_LIT_SUBST_START,
     STRING_LIT_SUBST_END,
+    STRING_LIT_SUBST_START,
     ;
 
     override fun toString(): String {
         return when (this) {
+            AMP -> "&"
+            AMP2 -> "&&"
+            AMP_EQ -> "&="
+            BANG -> "!"
+            BANG_EQ -> "!="
             BRACE_CLOSE -> "}"
             BRACE_OPEN -> "{"
             BRACKET_CLOSE -> "]"
             BRACKET_OPEN -> "["
             COLON -> ":"
+            COLON2 -> "::"
             COMMA -> ","
-            DOC_COMMENT -> "///"
+            DASH -> "-"
+            DASH_EQ -> "-="
+            DASH_GT -> "->"
             DOT -> "."
+            DOT2 -> ".."
+            DOT2_EQ -> "..="
+            DOT3 -> "..."
             EQ -> "="
             EQ_EQ -> "=="
             EQ_GT -> "=>"
             GT -> ">"
+            GT2 -> ">>"
+            GT2_EQ -> ">>="
             GT_EQ -> ">="
+            HAT -> "^"
+            HAT_EQ -> "^="
             KW_AS -> "as"
             KW_AS_BANG -> "as!"
             KW_AS_PERCENT -> "as%"
@@ -122,16 +163,27 @@ enum class Token {
             KW_WHERE -> "where"
             KW_WHILE -> "while"
             LT -> "<"
+            LT2 -> "<<"
+            LT2_EQ -> "<<="
             LT_EQ -> "<="
             NL -> "<NL>"
             PAREN_CLOSE -> ")"
             PAREN_OPEN -> "("
+            PERCENT -> "%"
+            PERCENT_EQ -> "%="
             PIPE -> "|"
+            PIPE2 -> "||"
+            PIPE_EQ -> "|="
+            PLUS -> "+"
+            PLUS_EQ -> "+="
+            QUEST -> "?"
             SEMI -> ";"
             SLASH -> "/"
+            SLASH_EQ -> "/="
+            STAR -> "*"
+            STAR_EQ -> "*="
             EOF,
             IDENT,
-            INT_LITERAL,
             STRING_LIT,
             STRING_LIT_END,
             RAW_STRING_LIT_END,

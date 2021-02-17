@@ -118,10 +118,6 @@ internal class Lexer(val src: Source, val diag: Diag) {
         return text(Span(span.start + start, span.end - 1))
     }
 
-    fun docComment(span: Span): CharSequence {
-        TODO()
-    }
-
     private fun unescape(s: CharSequence, start: Int): Sequence<CharSequence> {
         return sequence {
             var i = 0
@@ -284,10 +280,34 @@ internal class Lexer(val src: Source, val diag: Diag) {
                 mode().level -= 1
                 Token.PAREN_CLOSE
             }
+            '&' -> when (nthChar(0)) {
+                '&' -> {
+                    nextChar()
+                    Token.AMP2
+                }
+                '=' -> {
+                    nextChar()
+                    Token.AMP_EQ
+                }
+                else -> Token.AMP
+            }
+            '!' -> when (nthChar(0)) {
+                '=' -> {
+                    nextChar()
+                    Token.BANG_EQ
+                }
+                else -> Token.BANG
+            }
             ':' -> {
                 val mode = mode()
                 when (mode) {
-                    is Mode.Normal -> Token.COLON
+                    is Mode.Normal -> when (nthChar(0)) {
+                        ':' -> {
+                            nextChar()
+                            Token.COLON2
+                        }
+                        else -> Token.COLON
+                    }
                     is Mode.StringLit -> unreachable()
                     is Mode.StringLitSubst -> {
                         if (mode.level == 0) {
@@ -306,7 +326,23 @@ internal class Lexer(val src: Source, val diag: Diag) {
                 }
             }
             ',' -> Token.COMMA
-            '.' -> Token.DOT
+            '.' -> when (nthChar(0)) {
+                '.' -> {
+                    nextChar()
+                    when (nthChar(0)) {
+                        '.' -> {
+                            nextChar()
+                            Token.DOT3
+                        }
+                        '=' -> {
+                            nextChar()
+                            Token.DOT2_EQ
+                        }
+                        else -> Token.DOT2
+                    }
+                }
+                else -> Token.DOT
+            }
             '=' -> when (nthChar(0)) {
                 '>' -> {
                     nextChar()
@@ -318,10 +354,92 @@ internal class Lexer(val src: Source, val diag: Diag) {
                 }
                 else -> Token.EQ
             }
-            '<' -> if (maybeChar('=')) Token.LT_EQ else Token.LT
-            '>' -> if (maybeChar('=')) Token.GT_EQ else Token.GT
+            '<' -> when (nthChar(0)) {
+                '<' -> {
+                    nextChar()
+                    when (nthChar(0)) {
+                        '=' -> {
+                            nextChar()
+                            Token.LT2_EQ
+                        }
+                        else -> Token.LT2
+                    }
+                }
+                '=' -> {
+                    nextChar()
+                    Token.LT_EQ
+                }
+                else -> Token.LT
+            }
+            '>' -> when (nthChar(0)) {
+                '>' -> {
+                    nextChar()
+                    when (nthChar(0)) {
+                        '=' -> {
+                            nextChar()
+                            Token.GT2_EQ
+                        }
+                        else -> Token.GT2
+                    }
+                }
+                '=' -> {
+                    nextChar()
+                    Token.GT_EQ
+                }
+                else -> Token.GT
+            }
             ';' -> Token.SEMI
-            '|' -> Token.PIPE
+            '|' -> when (nthChar(0)) {
+                '|' -> {
+                    nextChar()
+                    Token.PIPE2
+                }
+                '=' -> {
+                    nextChar()
+                    Token.PIPE_EQ
+                }
+                else -> Token.PIPE
+            }
+            '-' -> when (nthChar(0)) {
+                '=' -> {
+                    nextChar()
+                    Token.DASH_EQ
+                }
+                '>' -> {
+                    nextChar()
+                    Token.DASH_GT
+                }
+                else -> Token.DASH
+            }
+            '+' -> when (nthChar(0)) {
+                '=' -> {
+                    nextChar()
+                    Token.PLUS_EQ
+                }
+                else -> Token.PLUS
+            }
+            '^' -> when (nthChar(0)) {
+                '=' -> {
+                    nextChar()
+                    Token.HAT_EQ
+                }
+                else -> Token.HAT
+            }
+            '?' -> Token.QUEST
+            '*' -> when (nthChar(0)) {
+                '=' -> {
+                    nextChar()
+                    Token.STAR_EQ
+                }
+                else -> Token.STAR
+            }
+            '%' -> when (nthChar(0)) {
+                '=' -> {
+                    nextChar()
+                    Token.PERCENT_EQ
+                }
+                else -> Token.PERCENT
+            }
             '\n' -> Token.NL
             '\r' -> {
                 if (nextChar() != '\n') {
@@ -329,10 +447,15 @@ internal class Lexer(val src: Source, val diag: Diag) {
                 }
                 Token.NL
             }
-            ifChar(c) { docComment(c) } -> Token.DOC_COMMENT
             ifChar(c) { lineComment(c) } -> return null
             ifChar(c) { blockComment(c, start) } -> return null
-            '/' -> Token.SLASH
+            '/' -> when (nthChar(0)) {
+                '=' -> {
+                    nextChar()
+                    Token.SLASH_EQ
+                }
+                else -> Token.SLASH
+            }
             ifChar(c) {
                 if (isWhitespace(c)) {
                     advanceWhile(::isWhitespace);
@@ -342,7 +465,6 @@ internal class Lexer(val src: Source, val diag: Diag) {
                 }
             } -> return null
             ifChar(c) { tok2 = stringLitStart(c, start); tok2 != null } -> tok2!!
-            ifChar(c) { intLiteral(c) } -> Token.INT_LITERAL
             ifChar(c) {
                 identKind = ident(c)
                 identKind != null
@@ -512,15 +634,6 @@ internal class Lexer(val src: Source, val diag: Diag) {
         }
     }
 
-    private fun intLiteral(c: Char): Boolean {
-        when (c) {
-            in '0'..'9', '-' -> {}
-            else -> return false
-        }
-        advanceWhile { it in '0'..'9' }
-        return true
-    }
-
     private fun isEof(): Boolean {
         return pos == src.text.length
     }
@@ -606,14 +719,6 @@ internal class Lexer(val src: Source, val diag: Diag) {
         }
 
         return true
-    }
-
-    private fun docComment(first: Char): Boolean {
-        return if (first == '/' && nthChar(0) == '/' && nthChar(1) == '/') {
-            TODO()
-        } else {
-            false
-        }
     }
 
     private fun fatal(span: Span, msg: String): Nothing {

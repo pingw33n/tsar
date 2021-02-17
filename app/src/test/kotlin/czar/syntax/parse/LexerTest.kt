@@ -60,14 +60,26 @@ class LexerTest {
         }
 
     @Test
-    internal fun keywords() {
+    internal fun tokens() {
         for (tok in Token.values()) {
-            if (tok.name.startsWith("KW_")) {
+            val inp = when (tok) {
+                Token.EOF -> ""
+                Token.IDENT -> "main"
+                Token.NL -> "\n"
+                Token.RAW_STRING_LIT_END,
+                Token.STRING_LIT,
+                Token.STRING_LIT_END,
+                Token.STRING_LIT_SUBST_END,
+                Token.STRING_LIT_SUBST_START,
+                 -> null
+                else -> tok.toString()
+            }
+            if (inp != null) {
                 val diag = Diag()
-                val lex = Lexer(Source(tok.toString(), Path.of("test")), diag)
-                assertTrue(diag.reports.isEmpty()) { diag.toString() }
+                val lex = Lexer(Source(inp, Path.of("test")), diag)
                 assertEquals(tok, lex.next().value)
                 assertEquals(Token.EOF, lex.next().value)
+                assertTrue(diag.reports.isEmpty()) { diag.toString() }
             }
         }
     }
@@ -100,7 +112,6 @@ class LexerTest {
             Token.EOF -> null
 
             Token.IDENT -> "r#${lexer.ident(tok.span)}"
-            Token.INT_LITERAL -> TODO()
 
             Token.STRING_LIT -> "S{${lexer.stringLit(tok.span).joinToString("")}}"
             Token.STRING_LIT_END, Token.RAW_STRING_LIT_END -> "E{${lexer.stringLitEnd(tok).joinToString("")}}"
@@ -114,7 +125,6 @@ class LexerTest {
             Token.BRACKET_OPEN,
             Token.COLON,
             Token.COMMA,
-            Token.DOC_COMMENT,
             Token.DOT,
             Token.EQ,
             Token.EQ_EQ,
@@ -165,6 +175,34 @@ class LexerTest {
             Token.KW_UNSAFE,
             Token.KW_USE,
             Token.KW_WHERE,
+            Token.AMP,
+            Token.AMP2,
+            Token.AMP_EQ,
+            Token.BANG,
+            Token.BANG_EQ,
+            Token.COLON2,
+            Token.DASH,
+            Token.DASH_EQ,
+            Token.DASH_GT,
+            Token.DOT2_EQ,
+            Token.DOT2,
+            Token.DOT3,
+            Token.GT2_EQ,
+            Token.GT2,
+            Token.HAT,
+            Token.HAT_EQ,
+            Token.LT2_EQ,
+            Token.LT2,
+            Token.PERCENT,
+            Token.PERCENT_EQ,
+            Token.PIPE2,
+            Token.PIPE_EQ,
+            Token.PLUS,
+            Token.PLUS_EQ,
+            Token.QUEST,
+            Token.SLASH_EQ,
+            Token.STAR,
+            Token.STAR_EQ,
             -> tok.value.toString()
         }
     }
