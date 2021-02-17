@@ -535,9 +535,7 @@ internal class Lexer(val src: Source, val diag: Diag) {
 
         nextChar()
 
-        advanceUntil {
-            if (nthChar(0) == '\n') 1 else null
-        }
+        advanceWhile { it != '\n' && it != '\r' }
 
         return true
     }

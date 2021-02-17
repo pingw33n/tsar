@@ -30,6 +30,9 @@ class LexerTest {
         """ "a{"b{("c": d)${'\n'}:${"\t"}inner${"\r\n"}}d":outer}e" """ to
             "S{a} {SS} S{b} {SS} ( E{c} : r#d ) {NL} SE{\tinner\r\n} E{d} SE{outer} E{e}",
         """ r"{}" r###"##{###}#"### """ to "E{{}} E{##{###}#}",
+        "//\n\r\n" to "{NL} {NL}",
+        "/*\n\r\n*/" to "",
+        "foo // bar  \n  foo ( /* bar (/* !!! */) )\r\n*/)" to "r#foo {NL} r#foo ( )"
         ).mapIndexed { i, (inp, exp) ->
             dynamicTest("$i") {
                 parseOk(inp, exp)
