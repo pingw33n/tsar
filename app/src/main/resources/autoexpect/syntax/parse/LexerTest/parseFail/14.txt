@@ -1,0 +1,14 @@
+error: `_` can't be a raw identifier
+  --> test:1:1
+1 | r#_ r#self r#Self
+    ~~~
+
+error: `self` can't be a raw identifier
+  --> test:1:5
+1 | r#_ r#self r#Self
+        ~~~~~~
+
+error: `Self` can't be a raw identifier
+  --> test:1:12
+1 | r#_ r#self r#Self
+               ~~~~~~

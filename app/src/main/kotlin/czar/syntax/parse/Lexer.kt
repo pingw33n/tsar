@@ -510,8 +510,12 @@ internal class Lexer(val src: Source, val diag: Diag) {
     }
 
     private fun keywordOrIdent(start: Int, identKind: IdentKind): Token {
-        val ident = ident(Span(start, pos))
+        val span = Span(start, pos)
+        val ident = ident(span)
         if (identKind == IdentKind.RAW) {
+            when (ident.value) {
+                "_", "self", "Self" -> error(span, "`${ident.value}` can't be a raw identifier")
+            }
             return Token.IDENT
         }
         return when (ident.value) {

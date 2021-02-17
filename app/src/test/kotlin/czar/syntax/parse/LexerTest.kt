@@ -4,8 +4,7 @@ import czar.diag.Diag
 import czar.syntax.S
 import czar.syntax.Source
 import czar.test.AutoExpect
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
@@ -58,6 +57,7 @@ class LexerTest {
         "'",
         "'foobar",
         "'''abcd''\n''foo\nbar\r\n'",
+        "r#_ r#self r#Self",
         ).mapIndexed { i, inp ->
             dynamicTest("$i") {
                 parseFail(i.toString(), inp)
@@ -227,6 +227,7 @@ class LexerTest {
             }
         } catch (_: ParseException) {
         }
+        assertFalse(diag.reports.isEmpty())
         AutoExpect.verify(id, diag.toString())
     }
 }
