@@ -561,7 +561,7 @@ internal class Lexer(val src: Source, val diag: Diag) {
             "static" -> Token.KW_STATIC
             "struct" -> Token.KW_STRUCT
             "super" -> Token.KW_SUPER
-            "underscore" -> Token.KW_UNDERSCORE
+            "_" -> Token.KW_UNDERSCORE
             "unsafe" -> Token.KW_UNSAFE
             "use" -> Token.KW_USE
             "where" -> Token.KW_WHERE
@@ -571,7 +571,7 @@ internal class Lexer(val src: Source, val diag: Diag) {
 
     private fun ident(c: Char): IdentKind? {
         when (c) {
-            in 'a'..'z', in 'A'..'Z' -> {}
+            in 'a'..'z', in 'A'..'Z', '_' -> {}
             else -> return null
         }
         val kind = if (c == 'r' && nthChar(0) == RAW_MARKER) {

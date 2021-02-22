@@ -158,7 +158,7 @@ enum class Token {
             KW_TRAIT -> "trait"
             KW_TRUE -> "true"
             KW_TYPE -> "type"
-            KW_UNDERSCORE -> "underscore"
+            KW_UNDERSCORE -> "_"
             KW_UNSAFE -> "unsafe"
             KW_USE -> "use"
             KW_WHERE -> "where"
