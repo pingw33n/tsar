@@ -7,6 +7,8 @@ import czar.syntax.Source
 import czar.syntax.Span
 import czar.syntax.hir.Ident
 import czar.unreachable
+import java.math.BigDecimal
+import java.math.BigInteger
 
 private const val BUF_CAP = 3
 private const val EOF = '\u0000'
@@ -17,7 +19,7 @@ private enum class IdentKind {
     RAW,
 }
 
-internal sealed class Mode(val start: Int) {
+private sealed class Mode(val start: Int) {
     var level: Int = 0;
 
     class Normal(start: Int): Mode(start)
@@ -128,6 +130,33 @@ internal class Lexer(val src: Source, val diag: Diag) {
         return r
     }
 
+    fun intLit(span: Span): BigInteger {
+        var t = text(span)
+        var radix = Radix.DEC
+        if (t.length > 2 && t[0] == '0') {
+            val r = Radix.of(t[1])
+            if (r == null) {
+                if (!isDigit(t[1], Radix.DEC)) {
+                    fatal(Span(span.start + 1, span.start + 2), "invalid integer literal radix")
+                }
+            } else {
+                t = t.subSequence(2, t.length)
+                radix = r
+            }
+        }
+
+        val s = deunderscore(t, span.start + t.length - span.length, radix)
+        val r = s.toString().toBigIntegerOrNull(radix.value)
+        return r ?: fatal(span, "invalid integer literal")
+    }
+
+    fun floatLit(span: Span): BigDecimal {
+        val t = text(span)
+        val s = deunderscore(t, span.start, Radix.DEC)
+        val r = s.toString().toBigDecimalOrNull()
+        return r ?: fatal(span, "invalid float literal")
+    }
+
     private fun decodeString(s: CharSequence, start: Int, unescape: Boolean): Sequence<CharSequence> {
         return sequence {
             var i = 0
@@ -181,7 +210,7 @@ internal class Lexer(val src: Source, val diag: Diag) {
         }
 
         var endMarker = 1
-        while (endMarker < s.length && isHexDigit(s[endMarker])) {
+        while (endMarker < s.length && isDigit(s[endMarker], Radix.HEX)) {
             endMarker += 1
         }
         if (endMarker == 1) {
@@ -425,6 +454,7 @@ internal class Lexer(val src: Source, val diag: Diag) {
                 }
                 else -> Token.DASH
             }
+            ifChar(c) { tok2 = numberLit(c); tok2 != null } -> tok2!!
             '+' -> when (nthChar(0)) {
                 '=' -> {
                     nextChar()
@@ -493,6 +523,94 @@ internal class Lexer(val src: Source, val diag: Diag) {
             }
         }
         return S(Span(start, pos), tok)
+    }
+
+    private enum class FloatPart {
+        NONE,
+        FRAC,
+        EXP_START,
+        EXP_MIDDLE,
+    }
+
+    private fun numberLit(c: Char): Token? {
+        if (!isDigit(c, Radix.DEC)) {
+            return null
+        }
+        val radix = if (c == '0') {
+            val r = Radix.of(nthChar(0))
+            if (r != null) {
+                nextChar()
+            }
+            r ?: Radix.DEC
+        } else {
+            Radix.DEC
+        }
+
+        var floatPart = FloatPart.NONE;
+        while (true) {
+            when (nthChar(0)) {
+                'e', 'E' -> if (radix == Radix.DEC) {
+                    if (floatPart < FloatPart.EXP_START) {
+                        floatPart = FloatPart.EXP_START;
+                        when (nthChar(1)) {
+                            '+', '-' -> {
+                                nextChar()
+                                floatPart = FloatPart.EXP_MIDDLE
+                            }
+                        }
+                    }
+                }
+                '.' -> {
+                    if (floatPart == FloatPart.NONE) {
+                        val next = nthChar(1);
+                        if (isDigit(next, Radix.DEC)) {
+                            floatPart = FloatPart.FRAC;
+                        } else {
+                            // 0.abs
+                            // 0..10
+                            break;
+                        }
+                    } else {
+                        // 0.1.0
+                        // 0.1.abs
+                        break;
+                    }
+                }
+                in '0'..'9' -> {
+                    if (floatPart == FloatPart.EXP_START) {
+                        floatPart = FloatPart.EXP_MIDDLE
+                    }
+                }
+                in 'A'..'Z', in 'a'..'z', '_' -> {}
+                else -> break
+            }
+            nextChar()
+        }
+        return if (floatPart == FloatPart.NONE) {
+            Token.INT_LIT
+        } else {
+            Token.FLOAT_LIT
+        }
+    }
+
+    private fun deunderscore(s: CharSequence, start: Int, radix: Radix): CharSequence {
+        val r = StringBuilder()
+        var i = 0
+        while (i < s.length) {
+            if (s[i] == '_') {
+                if (i > 0 && (!isDigit(s[i - 1], radix) || !isDigit(s.getOrElse(i + 1) { ' ' }, radix))) {
+                    error(Span.one(start + i), "invalid underscore placement")
+                    // Skip successive _'s
+                    while (s.getOrNull(i + 1) == '_') {
+                        i += 1
+                    }
+                }
+            } else {
+                r.append(s[i])
+            }
+            i += 1
+        }
+        return r
     }
 
     private fun charLit(c: Char, start: Int): Boolean {
@@ -778,6 +896,27 @@ private fun isWhitespace(c: Char): Boolean {
     }
 }
 
-private fun isHexDigit(c: Char): Boolean {
-     return c in '0'..'9' || c in 'a'..'f' || c in 'A'..'F'
+private enum class Radix(val value: Int) {
+    BIN(2),
+    DEC(10),
+    HEX(16),
+    ;
+
+    companion object {
+        fun of(c: Char): Radix? {
+            return when (c) {
+                'b' -> BIN
+                'x' -> HEX
+                else -> null
+            }
+        }
+    }
+}
+
+private fun isDigit(c: Char, radix: Radix): Boolean {
+    return when (radix) {
+        Radix.BIN -> c in '0'..'1'
+        Radix.DEC -> c in '0'..'9'
+        Radix.HEX -> c in '0'..'9' || c in 'a'..'f' || c in 'A'..'F'
+    }
 }

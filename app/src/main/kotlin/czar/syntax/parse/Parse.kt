@@ -25,6 +25,7 @@ enum class Token {
     EQ,
     EQ_EQ,
     EQ_GT,
+    FLOAT_LIT,
     GT,
     GT2_EQ,
     GT2,
@@ -32,6 +33,7 @@ enum class Token {
     HAT, // ^
     HAT_EQ,
     IDENT,
+    INT_LIT,
     KW_AS,
     KW_AS_BANG, // as!
     KW_AS_PERCENT, // as%
@@ -186,7 +188,9 @@ enum class Token {
 
             CHAR_LIT,
             EOF,
+            FLOAT_LIT,
             IDENT,
+            INT_LIT,
             STRING_LIT,
             STRING_LIT_END,
             RAW_STRING_LIT_END,

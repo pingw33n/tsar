@@ -1,0 +1,4 @@
+error: invalid integer literal
+  --> test:1:1
+1 | 0x123barfoo
+    ~~~~~~~~~~~

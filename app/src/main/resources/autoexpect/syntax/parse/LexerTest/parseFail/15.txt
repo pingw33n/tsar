@@ -1,0 +1,4 @@
+error: invalid integer literal radix
+  --> test:1:2
+1 | 0z123
+     ~

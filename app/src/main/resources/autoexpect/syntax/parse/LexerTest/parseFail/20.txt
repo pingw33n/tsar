@@ -1,0 +1,34 @@
+error: invalid underscore placement
+  --> test:1:2
+1 | 1_.0_ 1_E_10 1E_10 1E_+_10
+     ~
+
+error: invalid underscore placement
+  --> test:1:5
+1 | 1_.0_ 1_E_10 1E_10 1E_+_10
+        ~
+
+error: invalid underscore placement
+  --> test:1:8
+1 | 1_.0_ 1_E_10 1E_10 1E_+_10
+           ~
+
+error: invalid underscore placement
+  --> test:1:10
+1 | 1_.0_ 1_E_10 1E_10 1E_+_10
+             ~
+
+error: invalid underscore placement
+  --> test:1:16
+1 | 1_.0_ 1_E_10 1E_10 1E_+_10
+                   ~
+
+error: invalid float literal
+  --> test:1:20
+1 | 1_.0_ 1_E_10 1E_10 1E_+_10
+                       ~~~
+
+error: invalid underscore placement
+  --> test:1:22
+1 | 1_.0_ 1_E_10 1E_10 1E_+_10
+                         ~
