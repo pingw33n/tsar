@@ -17,6 +17,8 @@ enum class Token {
     COMMA,
     DASH, // -
     DASH_EQ,
+    DASH_PERCENT,
+    DASH_PERCENT_EQ,
     DASH_GT,
     DOT,
     DOT2_EQ,
@@ -87,6 +89,8 @@ enum class Token {
     PIPE_EQ,
     PLUS,
     PLUS_EQ,
+    PLUS_PERCENT,
+    PLUS_PERCENT_EQ,
     QUEST, // ?
     RAW_STRING_LIT_END,
     SEMI,
@@ -94,6 +98,8 @@ enum class Token {
     SLASH_EQ,
     STAR,
     STAR_EQ,
+    STAR_PERCENT,
+    STAR_PERCENT_EQ,
     STRING_LIT,
     STRING_LIT_END,
     STRING_LIT_SUBST_END,
@@ -118,6 +124,8 @@ enum class Token {
             DASH -> "-"
             DASH_EQ -> "-="
             DASH_GT -> "->"
+            DASH_PERCENT -> "-%"
+            DASH_PERCENT_EQ -> "-%="
             DOT -> "."
             DOT2 -> ".."
             DOT2_EQ -> "..="
@@ -181,12 +189,16 @@ enum class Token {
             PIPE_EQ -> "|="
             PLUS -> "+"
             PLUS_EQ -> "+="
+            PLUS_PERCENT -> "+%"
+            PLUS_PERCENT_EQ -> "+%="
             QUEST -> "?"
             SEMI -> ";"
             SLASH -> "/"
             SLASH_EQ -> "/="
             STAR -> "*"
             STAR_EQ -> "*="
+            STAR_PERCENT -> "*%"
+            STAR_PERCENT_EQ -> "*%="
 
             CHAR_LIT,
             EOF,

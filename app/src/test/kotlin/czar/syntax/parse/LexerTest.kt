@@ -6,7 +6,6 @@ import czar.syntax.Source
 import czar.test.AutoExpect
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.DynamicTest.dynamicTest
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.extension.ExtendWith
 import java.nio.file.Path
@@ -327,35 +326,36 @@ class LexerTest {
             }
         }.filterNotNull()
 
-    @Test
-    internal fun tokens() {
-        for (tok in Token.values()) {
-            val inp = when (tok) {
-                Token.CHAR_LIT -> "'a'"
-                Token.EOF -> ""
-                Token.FLOAT_LIT -> "0.0"
-                Token.IDENT -> "main"
-                Token.INT_LIT -> "0"
-                Token.LABEL -> "#l"
-                Token.NL -> "\n"
+    @TestFactory
+    internal fun tokens() = Token.values().asSequence()
+        .map { tok ->
+            dynamicTest("$tok") {
+                val inp = when (tok) {
+                    Token.CHAR_LIT -> "'a'"
+                    Token.EOF -> ""
+                    Token.FLOAT_LIT -> "0.0"
+                    Token.IDENT -> "main"
+                    Token.INT_LIT -> "0"
+                    Token.LABEL -> "#l"
+                    Token.NL -> "\n"
 
-                Token.RAW_STRING_LIT_END,
-                Token.STRING_LIT,
-                Token.STRING_LIT_END,
-                Token.STRING_LIT_SUBST_END,
-                Token.STRING_LIT_SUBST_START,
-                 -> null
-                else -> tok.toString()
+                    Token.RAW_STRING_LIT_END,
+                    Token.STRING_LIT,
+                    Token.STRING_LIT_END,
+                    Token.STRING_LIT_SUBST_END,
+                    Token.STRING_LIT_SUBST_START,
+                    -> null
+                    else -> tok.toString()
+                }
+                if (inp != null) {
+                    val diag = Diag()
+                    val lex = Lexer(Source(inp, Path.of("test")), diag)
+                    assertEquals(tok, lex.next().value)
+                    assertEquals(Token.EOF, lex.next().value)
+                    assertTrue(diag.reports.isEmpty()) { diag.toString() }
+                }
             }
-            if (inp != null) {
-                val diag = Diag()
-                val lex = Lexer(Source(inp, Path.of("test")), diag)
-                assertEquals(tok, lex.next().value)
-                assertEquals(Token.EOF, lex.next().value)
-                assertTrue(diag.reports.isEmpty()) { diag.toString() }
-            }
-        }
-    }
+        }.toList()
 
     private fun parseOk(@Suppress("UNUSED_PARAMETER") id: Int, inp: String, exp: String) {
         val diag = Diag()
@@ -441,54 +441,60 @@ class LexerTest {
             Token.KW_WHILE,
             -> "{${tok.value.name}}"
 
+            Token.AMP,
+            Token.AMP2,
+            Token.AMP_EQ,
+            Token.BANG,
+            Token.BANG_EQ,
             Token.BRACE_CLOSE,
             Token.BRACE_OPEN,
             Token.BRACKET_CLOSE,
             Token.BRACKET_EQ,
             Token.BRACKET_OPEN,
             Token.COLON,
+            Token.COLON2,
             Token.COMMA,
+            Token.DASH,
+            Token.DASH_EQ,
+            Token.DASH_GT,
+            Token.DASH_PERCENT,
+            Token.DASH_PERCENT_EQ,
             Token.DOT,
+            Token.DOT2_EQ,
+            Token.DOT2,
+            Token.DOT3,
             Token.EQ,
             Token.EQ_EQ,
             Token.EQ_GT,
             Token.GT,
+            Token.GT2_EQ,
+            Token.GT2,
             Token.GT_EQ,
+            Token.HAT,
+            Token.HAT_EQ,
             Token.LT,
+            Token.LT2_EQ,
+            Token.LT2,
             Token.LT_EQ,
             Token.PAREN_CLOSE,
             Token.PAREN_OPEN,
-            Token.PIPE,
-            Token.SEMI,
-            Token.SLASH,
-            Token.AMP,
-            Token.AMP2,
-            Token.AMP_EQ,
-            Token.BANG,
-            Token.BANG_EQ,
-            Token.COLON2,
-            Token.DASH,
-            Token.DASH_EQ,
-            Token.DASH_GT,
-            Token.DOT2_EQ,
-            Token.DOT2,
-            Token.DOT3,
-            Token.GT2_EQ,
-            Token.GT2,
-            Token.HAT,
-            Token.HAT_EQ,
-            Token.LT2_EQ,
-            Token.LT2,
             Token.PERCENT,
             Token.PERCENT_EQ,
+            Token.PIPE,
             Token.PIPE2,
             Token.PIPE_EQ,
             Token.PLUS,
             Token.PLUS_EQ,
+            Token.PLUS_PERCENT,
+            Token.PLUS_PERCENT_EQ,
             Token.QUEST,
+            Token.SEMI,
+            Token.SLASH,
             Token.SLASH_EQ,
             Token.STAR,
             Token.STAR_EQ,
+            Token.STAR_PERCENT,
+            Token.STAR_PERCENT_EQ,
             -> tok.value.toString()
         }
     }

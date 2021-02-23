@@ -464,6 +464,16 @@ internal class Lexer(val src: Source, val diag: Diag) {
                     nextChar()
                     Token.DASH_GT
                 }
+                '%' -> {
+                    nextChar()
+                    when (nthChar(0)) {
+                        '=' -> {
+                            nextChar()
+                            Token.DASH_PERCENT_EQ
+                        }
+                        else -> Token.DASH_PERCENT
+                    }
+                }
                 else -> Token.DASH
             }
             ifChar(c) { tok2 = numberLit(c); tok2 != null } -> tok2!!
@@ -471,6 +481,16 @@ internal class Lexer(val src: Source, val diag: Diag) {
                 '=' -> {
                     nextChar()
                     Token.PLUS_EQ
+                }
+                '%' -> {
+                    nextChar()
+                    when (nthChar(0)) {
+                        '=' -> {
+                            nextChar()
+                            Token.PLUS_PERCENT_EQ
+                        }
+                        else -> Token.PLUS_PERCENT
+                    }
                 }
                 else -> Token.PLUS
             }
@@ -486,6 +506,16 @@ internal class Lexer(val src: Source, val diag: Diag) {
                 '=' -> {
                     nextChar()
                     Token.STAR_EQ
+                }
+                '%' -> {
+                    nextChar()
+                    when (nthChar(0)) {
+                        '=' -> {
+                            nextChar()
+                            Token.STAR_PERCENT_EQ
+                        }
+                        else -> Token.STAR_PERCENT
+                    }
                 }
                 else -> Token.STAR
             }
