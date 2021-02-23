@@ -438,6 +438,7 @@ class LexerTest {
             Token.BRACE_CLOSE,
             Token.BRACE_OPEN,
             Token.BRACKET_CLOSE,
+            Token.BRACKET_EQ,
             Token.BRACKET_OPEN,
             Token.COLON,
             Token.COMMA,

@@ -9,6 +9,7 @@ enum class Token {
     BRACE_CLOSE,
     BRACE_OPEN,
     BRACKET_CLOSE,
+    BRACKET_EQ,
     BRACKET_OPEN,
     CHAR_LIT,
     COLON,
@@ -108,6 +109,7 @@ enum class Token {
             BRACE_CLOSE -> "}"
             BRACE_OPEN -> "{"
             BRACKET_CLOSE -> "]"
+            BRACKET_EQ -> "[="
             BRACKET_OPEN -> "["
             COLON -> ":"
             COLON2 -> "::"

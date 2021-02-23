@@ -309,7 +309,13 @@ internal class Lexer(val src: Source, val diag: Diag) {
             }
             '[' -> {
                 mode().level += 1
-                Token.BRACKET_OPEN
+                when (nthChar(0)) {
+                    '=' -> {
+                        nextChar()
+                        Token.BRACKET_EQ
+                    }
+                    else -> Token.BRACKET_OPEN
+                }
             }
             ']' -> {
                 mode().level -= 1
