@@ -40,7 +40,6 @@ enum class Token {
     KW_AS,
     KW_AS_BANG, // as!
     KW_AS_PERCENT, // as%
-    KW_AS_QUEST, // as?
     KW_BREAK,
     KW_CONST,
     KW_CONTINUE,
@@ -142,7 +141,6 @@ enum class Token {
             KW_AS -> "as"
             KW_AS_BANG -> "as!"
             KW_AS_PERCENT -> "as%"
-            KW_AS_QUEST -> "as?"
             KW_BREAK -> "break"
             KW_CONST -> "const"
             KW_CONTINUE -> "continue"

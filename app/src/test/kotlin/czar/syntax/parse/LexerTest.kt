@@ -405,7 +405,6 @@ class LexerTest {
             Token.KW_AS,
             Token.KW_AS_BANG,
             Token.KW_AS_PERCENT,
-            Token.KW_AS_QUEST,
             Token.KW_BREAK,
             Token.KW_CONST,
             Token.KW_CONTINUE,

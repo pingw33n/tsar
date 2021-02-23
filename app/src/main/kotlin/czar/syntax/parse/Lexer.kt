@@ -701,10 +701,6 @@ internal class Lexer(val src: Source, val diag: Diag) {
                         nextChar()
                         Token.KW_AS_BANG
                     }
-                    '?' -> {
-                        nextChar()
-                        Token.KW_AS_QUEST
-                    }
                     '%' -> {
                         nextChar()
                         Token.KW_AS_PERCENT
