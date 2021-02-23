@@ -54,6 +54,12 @@ internal class Lexer(val src: Source, val diag: Diag) {
         return Ident(if (raw) t.subSequence(2, t.length) else t)
     }
 
+    fun label(span: Span): Ident {
+        val t = text(span)
+        check(t[0] == '#')
+        return Ident(t.subSequence(1, t.length))
+    }
+
     fun stringLit(span: Span): Sequence<CharSequence> {
         val rawLen = if (src.text[span.start] == 'r') {
             var v = 0
@@ -520,6 +526,10 @@ internal class Lexer(val src: Source, val diag: Diag) {
                 identKind = ident(c)
                 identKind != null
             } -> keywordOrIdent(start, identKind!!)
+            '#' -> {
+                label(start)
+                Token.LABEL
+            }
             else -> {
                 if (isEof()) {
                     Token.EOF
@@ -694,9 +704,8 @@ internal class Lexer(val src: Source, val diag: Diag) {
     }
 
     private fun ident(c: Char): IdentKind? {
-        when (c) {
-            in 'a'..'z', in 'A'..'Z', '_' -> {}
-            else -> return null
+        if (!isIdentStart(c)) {
+            return null
         }
         val kind = if (c == 'r' && nthChar(0) == RAW_MARKER) {
             nextChar()
@@ -704,13 +713,18 @@ internal class Lexer(val src: Source, val diag: Diag) {
         } else {
             IdentKind.NORMAL
         }
-        advanceWhile {
-            when (it) {
-                in 'a'..'z', in 'A'..'Z', in '0'..'9', '_' -> true
-                else -> false
-            }
-        }
+        advanceWhile { isIdentMiddle(it) }
         return kind
+    }
+
+    private fun label(start: Int) {
+        if (!isIdentStart(nextChar())) {
+            fatal(Span(start, pos), "invalid label")
+        }
+        advanceWhile { isIdentMiddle(it) }
+        if (pos - start == 2 && src.text[pos - 1] == '_') {
+            error(Span(start, pos), "invalid label")
+        }
     }
 
     private fun stringLitStart(c: Char, start: Int): Token? {
@@ -924,5 +938,19 @@ private fun isDigit(c: Char, radix: Radix): Boolean {
         Radix.BIN -> c in '0'..'1'
         Radix.DEC -> c in '0'..'9'
         Radix.HEX -> c in '0'..'9' || c in 'a'..'f' || c in 'A'..'F'
+    }
+}
+
+private fun isIdentStart(c: Char): Boolean {
+    return when (c) {
+        in 'a'..'z', in 'A'..'Z', '_' -> true
+        else -> false
+    }
+}
+
+private fun isIdentMiddle(c: Char): Boolean {
+    return when (c) {
+        in 'a'..'z', in 'A'..'Z', in '0'..'9', '_' -> true
+        else -> false
     }
 }

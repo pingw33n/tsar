@@ -72,6 +72,7 @@ enum class Token {
     KW_USE,
     KW_WHERE,
     KW_WHILE,
+    LABEL, // #ident
     LT,
     LT2_EQ,
     LT2,
@@ -171,7 +172,6 @@ enum class Token {
             LT2 -> "<<"
             LT2_EQ -> "<<="
             LT_EQ -> "<="
-            NL -> "<NL>"
             PAREN_CLOSE -> ")"
             PAREN_OPEN -> "("
             PERCENT -> "%"
@@ -193,6 +193,8 @@ enum class Token {
             FLOAT_LIT,
             IDENT,
             INT_LIT,
+            LABEL,
+            NL,
             STRING_LIT,
             STRING_LIT_END,
             RAW_STRING_LIT_END,

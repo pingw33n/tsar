@@ -1,0 +1,4 @@
+error: invalid label
+  --> test:1:1
+1 | #
+    ~
