@@ -1,5 +1,13 @@
 package czar.syntax.parse
 
+import czar.diag.Diag
+import czar.diag.Report
+import czar.setOnce
+import czar.syntax.S
+import czar.syntax.Source
+import czar.syntax.Span
+import czar.syntax.hir.*
+
 enum class Token {
     AMP,
     AMP2,
@@ -104,6 +112,113 @@ enum class Token {
     STRING_LIT_SUBST_END,
     STRING_LIT_SUBST_START,
     ;
+
+    fun isKeyword(): Boolean = when (this) {
+        KW_AS,
+        KW_AS_BANG,
+        KW_AS_PERCENT,
+        KW_BREAK,
+        KW_CONST,
+        KW_CONTINUE,
+        KW_ELSE,
+        KW_ENUM,
+        KW_FALSE,
+        KW_FN,
+        KW_FOR,
+        KW_IF,
+        KW_IMPL,
+        KW_IN,
+        KW_IS,
+        KW_LOOP,
+        KW_MATCH,
+        KW_MODULE,
+        KW_MUT,
+        KW_NOT,
+        KW_PACKAGE,
+        KW_PUB,
+        KW_RET,
+        KW_SELF_LOWER,
+        KW_SELF_UPPER,
+        KW_STATIC,
+        KW_STRUCT,
+        KW_SUPER,
+        KW_TRAIT,
+        KW_TRUE,
+        KW_TYPE,
+        KW_UNDERSCORE,
+        KW_UNSAFE,
+        KW_USE,
+        KW_WHERE,
+        KW_WHILE,
+        -> true
+        AMP,
+        AMP2,
+        AMP_EQ,
+        BANG,
+        BANG_EQ,
+        BRACE_CLOSE,
+        BRACE_OPEN,
+        BRACKET_CLOSE,
+        BRACKET_EQ,
+        BRACKET_OPEN,
+        CHAR_LIT,
+        COLON,
+        COLON2,
+        COMMA,
+        DASH,
+        DASH_EQ,
+        DASH_PERCENT,
+        DASH_PERCENT_EQ,
+        DASH_GT,
+        DOT,
+        DOT2_EQ,
+        DOT2,
+        DOT3,
+        EOF,
+        EQ,
+        EQ_EQ,
+        EQ_GT,
+        FLOAT_LIT,
+        GT,
+        GT2_EQ,
+        GT2,
+        GT_EQ,
+        HAT,
+        HAT_EQ,
+        IDENT,
+        INT_LIT,
+        LABEL,
+        LT,
+        LT2_EQ,
+        LT2,
+        LT_EQ,
+        NL,
+        PAREN_CLOSE,
+        PAREN_OPEN,
+        PERCENT,
+        PERCENT_EQ,
+        PIPE,
+        PIPE2,
+        PIPE_EQ,
+        PLUS,
+        PLUS_EQ,
+        PLUS_PERCENT,
+        PLUS_PERCENT_EQ,
+        QUEST,
+        RAW_STRING_LIT_END,
+        SEMI,
+        SLASH,
+        SLASH_EQ,
+        STAR,
+        STAR_EQ,
+        STAR_PERCENT,
+        STAR_PERCENT_EQ,
+        STRING_LIT,
+        STRING_LIT_END,
+        STRING_LIT_SUBST_END,
+        STRING_LIT_SUBST_START,
+        -> false
+    }
 
     override fun toString(): String {
         return when (this) {
@@ -214,127 +329,471 @@ enum class Token {
         }
     }}
 
-class ParseException: RuntimeException()
+internal class ParseException: RuntimeException()
 
-//private class Parser(val src: Source, val diag: Diag) {
-//    val lex = Lex(src, diag)
-//
-//    fun parse(): Module {
-//        return module()
-//    }
-//
-//    private fun module(): Module {
+private class Parser(val src: Source, val diag: Diag) {
+    private val lex = Lexer(src, diag)
+    private val spans: MutableMap<Node.Id<*>, Span> = mutableMapOf()
 
-//    }
-//
-//    private fun maybeDocComment(): S<CharSequence>? {
-//        return maybe(Token.DOC_COMMENT)?.let { S(it.span, lex.docComment(it.span)) }
-//    }
-//
-//    private fun maybe(tok: Token): S<Token>? {
-//        return if (lex.nth(0).value == tok) {
-//            lex.next()
-//        } else {
-//            null
-//        }
-//    }
-//
-//    private fun token(expected: Token): S<Token> {
-//        val actual = lex.next()
-//        if (actual.value != expected) {
-//            error(actual.span, "expected $expected, found ${actual.value}")
-//            throw ParseException()
-//        }
-//        return actual
-//    }
-//
-//    private fun ident(): S<Ident> {
-//        val span = token(Token.IDENT).span
-//        return S(span, lex.ident(span))
-//    }
-//
-//    private fun maybeIdent(expected: Ident): S<Unit>? {
-//        val tok = lex.nth(0)
-//        return if (tok.value == Token.IDENT && lex.ident(tok.span) == expected) {
-//            lex.next()
-//            S(tok.span, Unit)
-//        } else {
-//            null
-//        }
-//    }
-//
-//    private fun intLiteral(): S<Long> {
-//        val span = token(Token.INT_LITERAL).span
-//        return S(span, lex.long(span))
-//    }
-//
-//    private fun stringLiteral(): S<CharSequence> {
-//        val span = token(Token.STRING_LITERAL).span
-//        return S(span, lex.string(span))
-//    }
-//
-//    private fun maybeLiteral(): S<Literal>? {
-//        val tok = lex.nth(0)
-//        val v = when (tok.value) {
-//            Token.INT_LITERAL -> {
-//                lex.next()
-//                Literal.Int(lex.long(tok.span))
-//            }
-//            Token.KW_FALSE -> {
-//                lex.next()
-//                Literal.Bool(false)
-//            }
-//            Token.KW_TRUE -> {
-//                lex.next()
-//                Literal.Bool(true)
-//            }
-//            Token.STRING_LITERAL -> {
-//                lex.next()
-//                Literal.String(lex.string(tok.span))
-//            }
-//            Token.IDENT -> {
-//                val path = path(false)
-//
-//                val args = if (maybe(Token.PAREN_OPEN) != null) {
-//                    val args = mutableListOf<S<Literal>>()
-//                    while (true) {
-//                        val lit = maybeLiteral() ?: break
-//                        args.add(lit)
-//                        maybe(Token.COMMA) ?: break
-//                    }
-//                    token(Token.PAREN_CLOSE)
-//                    args
-//                } else {
-//                    emptyList()
-//                }
-//
-//                Literal.Data(path, args)
-//            }
-//            else -> return null
-//        }
-//        return tok.map { v }
-//    }
-//
-//    private fun literal(): S<Literal> {
-//        return maybeLiteral() ?: fatal(lex.nth(0).span, "expected literal, found ${lex.nth(0).value}")
-//    }
-//
-//    private fun error(span: Span, msg: String) {
-//        diag.report(Report(src, span, msg))
-//    }
-//
-//    private fun fatal(span: Span, msg: String): Nothing {
-//        error(span, msg)
-//        throw ParseException()
-//    }
-//}
-//
-//fun parse(src: Source, diag: Diag): Module? {
-//    val errsBefore = diag.reports.size
-//    return try {
-//        Parser(src, moduleResolver, diag).parse()
-//    } catch (e: ParseException) {
-//        check(diag.reports.size > errsBefore) { e.stackTraceToString() }
-//        null
-//    }
-//}
+    fun parse(): Hir {
+        val items = moduleItems()
+        val module = Module(src, name = null, pub = null, items)
+        spans.setOnce(module.id, Span(0, src.text.length))
+        // TODO check all Nodes have spans
+        return Hir(module, spans)
+    }
+
+    private fun moduleItems(): List<Module.Item> {
+        val items = mutableListOf<Module.Item>()
+        while (true) {
+            val item = moduleItem() ?: break
+            items.add(item)
+        }
+        return items
+    }
+
+    private fun isPrefix(vararg toks: Token): Boolean {
+        for (i in toks.indices) {
+            if (lex.at(i).value != toks[i]) {
+                return false
+            }
+        }
+        return true
+    }
+
+    private fun moduleItem(): Module.Item? {
+        return when {
+            isPrefix(Token.KW_FN) ||
+            isPrefix(Token.KW_UNSAFE, Token.KW_FN) ||
+            isPrefix(Token.KW_PUB, Token.KW_FN) ||
+            isPrefix(Token.KW_PUB, Token.KW_UNSAFE, Token.KW_FN)
+            -> Module.Item.FnDef(fnDef())
+
+            isPrefix(Token.EOF) -> null
+
+            else -> unexpected(lex.at(0), "module item")
+        }
+    }
+
+    private fun maybePub(): S<Pub>? {
+        val span = maybe(Token.KW_PUB)?.span ?: return null
+        val scope = if (maybe(Token.PAREN_OPEN) != null) {
+            val scopeSpan = expect(Token.KW_PACKAGE).span
+            expect(Token.PAREN_CLOSE)
+            S(scopeSpan, Pub.Scope.PACKAGE)
+        } else {
+            null
+        }
+        return S(span, Pub(scope))
+    }
+
+    private fun fnDef(): FnDef {
+        val span = spanner()
+
+        val pub = maybePub()
+        val unsafe = maybe(Token.KW_UNSAFE)?.map { }
+
+        check(lex.next().value == Token.KW_FN)
+
+        val name = ident()
+        val typeParams = typeParams()
+        val params = mutableListOf<FnParam>()
+        commaDelimited(Token.PAREN_OPEN, Token.PAREN_CLOSE) {
+            val paramSpan = spanner()
+            val node = if (params.isEmpty() &&
+                    (isPrefix(Token.KW_SELF_LOWER) || isPrefix(Token.AMP, Token.KW_SELF_LOWER))) {
+                val ref = maybe(Token.AMP)
+                val paramName = lex.next().map {
+                    check(it == Token.KW_SELF_LOWER)
+                    Ident.SELF_LOWER
+                }
+
+                val label = paramName.map { FnParam.Label.SELF }
+
+                val selfSpan = paramName.span
+                val selfPath = Path(null, listOf(S(selfSpan, Path.Item(S(selfSpan, Ident.SELF_UPPER), emptyList()))),
+                    emptyList())
+                spans.setOnce(selfPath.id, selfSpan)
+                val selfType = TypeExpr.Path(selfPath)
+                spans.setOnce(selfType.id, selfSpan)
+                val type = if (ref != null) {
+                    val n = TypeExpr.Ref(selfType)
+                    spans.setOnce(n.id, paramSpan())
+                    n
+                } else {
+                    selfType
+                }
+
+                FnParam(label, paramName, type)
+            } else {
+                val label = fnParamLabel()
+                val paramName = ident()
+                expect(Token.COLON)
+                val type = typeExpr()
+                FnParam(label, paramName, type)
+            }
+            spans.setOnce(node.id, paramSpan())
+            params.add(node)
+        }
+        val result = if (maybe(Token.DASH_GT) != null) {
+            typeExpr()
+        } else {
+            null
+        }
+
+        // FIXME this is for initial impl only
+        val hasBody = !name.value.value.startsWith("__extern__")
+
+        val body = if (hasBody) {
+            block()
+        } else {
+            null
+        }
+
+        val node = FnDef(pub, name, typeParams, params, result, unsafe, body, variadic = false)
+        spans.setOnce(node.id, span())
+        return node
+    }
+
+    private fun fnParamLabel(): S<FnParam.Label>? {
+        if (lex.at(1).value != Token.IDENT) {
+            return null
+        }
+        val tok = lex.at(0)
+        return when {
+            tok.value == Token.IDENT -> {
+                ident().map { FnParam.Label(it.value) }
+            }
+            tok.value.isKeyword() -> {
+                lex.next().map { FnParam.Label(it.toString()) }
+            }
+            else -> {
+                null
+            }
+        }
+    }
+
+    private fun block(): Block? {
+        expect(Token.BRACE_OPEN)
+        if (lex.at(0).value != Token.BRACE_CLOSE) {
+            TODO()
+        }
+        val items = mutableListOf<Block.Item>()
+        expect(Token.BRACE_CLOSE)
+        return Block(items)
+    }
+
+    private fun typeExpr(): TypeExpr {
+        val span = spanner()
+        val path = maybePath(import = false)
+        val node = if (path == null) {
+            when {
+                maybe(Token.AMP) != null -> TypeExpr.Ref(typeExpr())
+                maybe(Token.BRACKET_OPEN) != null -> {
+                    val item = typeExpr()
+                    val len = if (maybe(Token.SEMI) != null) {
+                        expr()
+                    } else {
+                        null
+                    }
+                    expect(Token.BRACKET_CLOSE)
+                    TypeExpr.Slice(item, len)
+                }
+                isPrefix(Token.PAREN_OPEN) -> {
+                    val fields = mutableListOf<StructBody.Field>()
+                    val record = isPrefix(Token.PAREN_OPEN, Token.IDENT, Token.COLON)
+                    val hadTrailingComma = commaDelimited(Token.PAREN_OPEN, Token.PAREN_CLOSE) {
+                        val name = if (record) {
+                            val name = ident()
+                            expect(Token.COLON)
+                            name
+                        } else {
+                            null
+                        }
+                        val type = typeExpr()
+                        fields.add(StructBody.Field(pub = null, name, type))
+                    }!!
+                    if (fields.size == 1 && !record && !hadTrailingComma) {
+                        TODO()
+                    } else {
+                        TypeExpr.UnnamedStruct(StructBody(fields))
+                    }
+                }
+                else -> unexpected(lex.at(0), "`&`, `[`, `(` or path")
+            }
+        } else {
+            TypeExpr.Path(path)
+        }
+        spans.setOnce(node.id, span())
+        return node
+    }
+
+    private fun expr(): Expr? {
+        TODO("Not yet implemented")
+    }
+
+    private fun maybePath(import: Boolean): Path? {
+        val span = spanner()
+        val origin: S<Path.Origin>? = when (lex.at(0).value) {
+            Token.IDENT -> null
+            Token.COLON2 -> {
+                lex.next()
+                Path.Origin.Package(null)
+            }
+            Token.KW_PACKAGE -> {
+                lex.next()
+
+                val name = if (maybe(Token.PAREN_OPEN) != null) {
+                    val r = ident()
+                    expect(Token.PAREN_CLOSE)
+                    r.value
+                } else {
+                    null
+                }
+
+                expect(Token.COLON2)
+
+                Path.Origin.Package(name)
+            }
+            Token.KW_SUPER -> {
+                lex.next()
+                var count = 1
+                while (true) {
+                    expect(Token.COLON2)
+                    if (maybe(Token.KW_SUPER) == null) {
+                        break
+                    }
+                    count += 1
+                }
+                Path.Origin.Super(count)
+            }
+            else -> return null
+        }?.let { S(span(), it) }
+        val prefix = mutableListOf<S<Path.Item>>()
+        val suffix = mutableListOf<S<Path.SuffixItem>>()
+        while (true) {
+            val suffixItem = maybePathSuffixItem(import)
+            if (suffixItem == null) {
+                if (maybe(Token.BRACE_OPEN) != null) {
+                    commaDelimited(Token.BRACE_OPEN, Token.BRACE_CLOSE) {
+                        suffix.add(pathSuffixItem(import))
+                    }
+                } else {
+                    unexpected(lex.at(0))
+                }
+            } else {
+                if (suffixItem.value is Path.SuffixItem.Item && suffixItem.value.renamedAs == null) {
+                    if (maybe(Token.COLON2) != null) {
+                        if (suffixItem.value.item.value.name.value == Ident.SELF_LOWER) {
+                            error(suffixItem.value.item.value.name.span,
+                                "`self` imports are only allowed within a { } list")
+                        }
+                        prefix.add(suffixItem.value.item)
+                        continue
+                    } else {
+                        suffix.add(suffixItem)
+                    }
+                }
+            }
+            break
+        }
+
+        val node = Path(origin, prefix, suffix)
+        spans.setOnce(node.id, span())
+        return node
+    }
+
+    private fun spanner(): () -> Span {
+        val start = lex.at(0).span.start
+        return { Span(start, lex.at(-1).span.end) }
+    }
+
+    private fun pathRenamedAs(): S<Ident>? {
+        return if (maybe(Token.KW_AS) != null) {
+            ident()
+        } else {
+            null
+        }
+    }
+
+    private fun maybePathSuffixItem(import: Boolean): S<Path.SuffixItem>? {
+        val span = spanner()
+        val item = when (lex.at(0).value) {
+            Token.IDENT -> {
+                val itemSpan = spanner()
+                val ident = ident()
+                val typeArgs = typeArgs()
+                val renamedAs = if (import) pathRenamedAs() else null
+                Path.SuffixItem.Item(S(itemSpan(), Path.Item(ident, typeArgs)), renamedAs)
+            }
+            Token.STAR -> {
+                if (import) {
+                    lex.next()
+                    Path.SuffixItem.Star
+                } else {
+                    return null
+                }
+            }
+            Token.KW_SELF_LOWER -> {
+                if (import) {
+                    val ident = lex.next().map { Ident.SELF_LOWER }
+                    val renamedAs = pathRenamedAs()
+                    Path.SuffixItem.Item(ident.map { Path.Item(ident, emptyList()) }, renamedAs)
+                } else {
+                    return null
+                }
+            }
+            else -> return null
+        }
+        return S(span(), item)
+    }
+
+    private fun pathSuffixItem(import: Boolean): S<Path.SuffixItem> {
+        return maybePathSuffixItem(import) ?: unexpected(lex.at(0), Token.STAR, Token.KW_SELF_LOWER)
+    }
+
+    private fun typeArgs(): List<TypeExpr> {
+        val r = mutableListOf<TypeExpr>()
+        commaDelimited(Token.LT, Token.GT) {
+            r.add(typeExpr())
+        }
+        return r
+    }
+
+    private fun commaDelimited(start: Token, end: Token, f: () -> Unit): Boolean? {
+        maybe(start) ?: return null
+        if (maybeSplit(end) != null) {
+            return false
+        }
+        while (true) {
+            f()
+
+            val comma = maybe(Token.COMMA) != null
+            if (maybeSplit(end) != null) {
+                return comma
+            }
+            if (!comma) {
+                unexpected(lex.at(0), Token.COMMA)
+            }
+        }
+    }
+
+    private fun typeParams(): List<TypeParam> {
+        val r = mutableListOf<TypeParam>()
+        commaDelimited(Token.LT, Token.GT) {
+            r.add(TypeParam(ident()))
+        }
+        return r
+    }
+
+    private fun maybeSplit(tok: Token): S<Token>? {
+        val unsplit = when (tok) {
+            Token.GT -> Token.GT2
+            else -> return maybe(tok)
+        }
+        val next = lex.at(0)
+        when (next.value) {
+            tok -> {
+                lex.next()
+                return next
+            }
+            unsplit -> {}
+            else -> return null
+        }
+
+        lex.next()
+        check(next.span.length == 2)
+        lex.push(S(Span.one(next.span.start + 1), tok))
+        return S(Span.one(next.span.start), tok)
+    }
+
+    private fun maybeIdent(): S<Ident>? {
+        val span = maybe(Token.IDENT)?.span ?: return null
+        val v = lex.ident(span)
+        return S(span, v)
+    }
+
+    private fun ident(): S<Ident> {
+        return maybeIdent() ?: unexpected(lex.at(0), Token.IDENT)
+    }
+
+    private fun maybe(tok: Token): S<Token>? {
+        return if (lex.at(0).value == tok) {
+            lex.next()
+        } else {
+            null
+        }
+    }
+
+    private fun expect(expected: Token): S<Token> {
+        val actual = lex.next()
+        if (actual.value != expected) {
+            unexpected(actual, expected)
+        }
+        return actual
+    }
+
+    private fun displayToken(tok: Token): String {
+        return when (tok) {
+            Token.CHAR_LIT,
+            Token.EOF,
+            Token.FLOAT_LIT,
+            Token.IDENT,
+            Token.INT_LIT,
+            Token.LABEL,
+            Token.NL,
+            Token.STRING_LIT,
+            Token.STRING_LIT_END,
+            Token.RAW_STRING_LIT_END,
+            Token.STRING_LIT_SUBST_START,
+            Token.STRING_LIT_SUBST_END,
+            -> tok.toString()
+            else -> "`$tok`"
+        }
+    }
+
+    private fun unexpected(actual: S<Token>, vararg expected: Token): Nothing {
+        unexpected(actual, expected.asSequence().map { displayToken(it) }.joinToString() )
+    }
+
+    private fun unexpected(actual: S<Token>, expected: CharSequence? = null): Nothing {
+        val msg = if (expected == null) {
+            "unexpected ${displayToken(actual.value)}"
+        } else {
+            "expected $expected, found ${displayToken(actual.value)}"
+        }
+        fatal(actual.span, msg)
+    }
+
+    private fun error(span: Span, msg: String) {
+        diag.report(Report(src, span, msg))
+    }
+
+    private fun fatal(span: Span, msg: String): Nothing {
+        error(span, msg)
+        throw ParseException()
+    }
+}
+
+fun parse(src: Source, diag: Diag): Hir? {
+    val errsBefore = diag.reports.size
+    return try {
+        Parser(src, diag).parse()
+    } catch (e: ParseException) {
+        check(diag.reports.size > errsBefore) { e.stackTraceToString() }
+        null
+    }
+}
+
+fun main() {
+    val diag = Diag()
+    val hir = parse(
+        Source("""
+        fn foo<T, U, V>(break v: package(std)::T<F<X<Z>>>) {}
+    """, java.nio.file.Path.of("test")), diag
+    )
+    if (diag.reports.isNotEmpty()) {
+        println(diag.toString())
+    }
+    hir!!
+}

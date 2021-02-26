@@ -6,7 +6,6 @@ import org.junit.jupiter.api.extension.BeforeEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit
 
 class AutoExpect private constructor(): AfterEachCallback, BeforeEachCallback {
     private enum class Mode {
@@ -22,11 +21,6 @@ class AutoExpect private constructor(): AfterEachCallback, BeforeEachCallback {
     )
 
     companion object {
-        private val REPO_DIR: Path by lazy {
-            val dir = Path.of(execute("git rev-parse --show-toplevel").trim())
-            check(Files.isDirectory(dir))
-            dir
-        }
         private val CONTEXT: ThreadLocal<Context> = ThreadLocal()
 
         fun verify(subId: String, actual: CharSequence) {
@@ -62,17 +56,6 @@ class AutoExpect private constructor(): AfterEachCallback, BeforeEachCallback {
                 }
             }
         }
-
-        private fun execute(cmd: String): String {
-            val proc = ProcessBuilder(*cmd.split(" ").toTypedArray())
-                .redirectOutput(ProcessBuilder.Redirect.PIPE)
-                .redirectError(ProcessBuilder.Redirect.INHERIT)
-                .start()
-
-            proc.waitFor(1, TimeUnit.MINUTES)
-            check(proc.exitValue() == 0)
-            return proc.inputStream.bufferedReader().readText()
-        }
     }
 
     override fun beforeEach(context: ExtensionContext?) {
@@ -85,7 +68,7 @@ class AutoExpect private constructor(): AfterEachCallback, BeforeEachCallback {
             "record_all" -> Mode.RECORD_ALL
             else -> throw IllegalArgumentException("Unknown AUTO_EXPECT option: $modeStr")
         }
-        val axDir = REPO_DIR.resolve("app/src/test/resources/autoexpect");
+        val axDir = TEST_DIR.resolve("autoexpect");
         check(Files.isDirectory(axDir))
         val dir = axDir.resolve(context.testClass.get().name
             .removePrefix("czar.")

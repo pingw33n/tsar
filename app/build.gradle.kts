@@ -37,6 +37,7 @@ tasks {
     withType<KotlinCompile> {
         kotlinOptions.jvmTarget = "11"
         kotlinOptions.freeCompilerArgs = listOf("-Xinline-classes")
+        kotlinOptions.useIR = true
     }
     withType<Test> {
        useJUnitPlatform()

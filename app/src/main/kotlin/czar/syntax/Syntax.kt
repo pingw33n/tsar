@@ -2,6 +2,8 @@ package czar.syntax
 
 import java.nio.file.Path
 
+const val FILE_SUFFIX: String = "cz"
+
 data class Span(val start: Int, val end: Int) {
     val length: Int get() = end - start
 
@@ -26,7 +28,9 @@ data class Span(val start: Int, val end: Int) {
     fun isEmpty(): Boolean = length == 0
 }
 
-data class S<T>(val span: Span, val value: T)
+data class S<T>(val span: Span, val value: T) {
+    inline fun <U>map(f: (T) -> U): S<U> = S(span, f(value))
+}
 
 data class Source(
     val text: CharSequence,

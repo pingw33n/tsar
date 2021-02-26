@@ -10,7 +10,6 @@ import czar.unreachable
 import java.math.BigDecimal
 import java.math.BigInteger
 
-private const val BUF_CAP = 3
 private const val EOF = '\u0000'
 private const val RAW_MARKER = '#'
 
@@ -27,25 +26,76 @@ private sealed class Mode(val start: Int) {
     class StringLitSubst(start: Int): Mode(start)
 }
 
+private class Buf(val nlMode: Lexer.NlMode) {
+    companion object {
+        const val CAP = 3
+    }
+
+    var pos: Int = 0
+    val toks: MutableList<S<Token>> = mutableListOf()
+    var lastRemoved: S<Token>? = null
+
+    fun removeFirst(): S<Token> {
+        val r = toks.removeAt(0)
+        lastRemoved = r
+        return r
+    }
+}
+
 internal class Lexer(val src: Source, val diag: Diag) {
-    private var pos: Int = 0
-    private val buf: MutableList<S<Token>> = mutableListOf()
+    enum class NlMode {
+        ALLOW,
+        SKIP,
+    }
+
+    private val buf: Buf = Buf(NlMode.ALLOW)
+    private val nlessBuf: Buf = Buf(NlMode.SKIP)
+
     private val modeStack: MutableList<Mode> = mutableListOf()
     init {
         modeStack.add(Mode.Normal(0))
     }
+    private val nlModeStack: MutableList<NlMode> = mutableListOf()
+    init {
+        nlModeStack.add(NlMode.SKIP)
+    }
+
+    fun pushNlMode(nlMode: NlMode) {
+        nlModeStack.add(nlMode)
+    }
+
+    fun popNlMode() {
+        nlModeStack.removeLast()
+    }
 
     fun next(): S<Token> {
-        val r = nth(0)
-        if (buf.isNotEmpty()) {
-            buf.removeAt(0)
-        }
+        val r = at(0)
+        popBuf()
         return r
     }
 
-    fun nth(i: Int): S<Token> {
-        fillBuf()
-        return buf[i]
+    fun push(tok: S<Token>) {
+        addBuf(buf, tok, prepend = true)
+        addBuf(nlessBuf, tok, prepend = true)
+    }
+
+    fun at(i: Int): S<Token> {
+        check(i >= -1 && i < Buf.CAP)
+
+        val curBuf = curBuf()
+        return if (i == -1) {
+            curBuf.lastRemoved!!
+        } else {
+            fillBufs()
+            curBuf.toks[i]
+        }
+    }
+
+    private fun curBuf(): Buf {
+        return when (nlModeStack.last()) {
+            NlMode.ALLOW -> buf
+            NlMode.SKIP -> nlessBuf
+        }
     }
 
     fun ident(span: Span): Ident {
@@ -253,30 +303,63 @@ internal class Lexer(val src: Source, val diag: Diag) {
     }
 
     private fun nthChar(i: Int): Char {
-        return src.text.getOrNull(pos + i) ?: EOF
+        return src.text.getOrNull(buf.pos + i) ?: EOF
     }
 
     private fun nextChar(): Char {
         val r = nthChar(0)
-        if (pos < src.text.length) {
-            pos += 1
+        if (buf.pos < src.text.length) {
+            buf.pos += 1
         }
         return r
     }
 
-    private fun fillBuf() {
-        while (buf.size < BUF_CAP) {
+    private fun wasLastNl(): Boolean {
+        return buf.toks.isNotEmpty() && buf.toks.last().value == Token.NL ||
+                buf.toks.isEmpty() && buf.lastRemoved?.value == Token.NL
+    }
+
+    private fun fillBufs() {
+        while (curBuf().toks.size < Buf.CAP) {
             val tok = scan()
-            if (tok != null) {
-                buf.add(tok)
+            if (tok == null || tok.value == Token.NL && wasLastNl()) {
+                continue
             }
+            addBuf(buf, tok, prepend = false)
+            addBuf(nlessBuf, tok, prepend = false)
         }
     }
+
+    private fun addBuf(buf: Buf, tok: S<Token>, prepend: Boolean) {
+        if (buf.nlMode == NlMode.ALLOW || tok.value != Token.NL) {
+            buf.toks.add(if (prepend) 0 else buf.toks.size, tok)
+        }
+    }
+
+    private fun popBuf() {
+        val sync: Buf
+        val pop = when (nlModeStack.last()) {
+            NlMode.ALLOW -> {
+                sync = nlessBuf
+                buf
+            }
+            NlMode.SKIP -> {
+                sync = buf
+                nlessBuf
+            }
+        }
+
+        val removed = pop.removeFirst()
+        while (sync.toks.isNotEmpty() && sync.toks[0].span.start <= removed.span.start) {
+            sync.removeFirst()
+        }
+    }
+
 
     private fun scan(): S<Token>? {
         if (mode() is Mode.StringLit) {
             return if (nthChar(0) == '{') {
-                val tok = S(Span(pos, pos + 1), Token.STRING_LIT_SUBST_START)
+                val tok = S(Span(buf.pos, buf.pos + 1), Token.STRING_LIT_SUBST_START)
                 nextChar()
                 modeStack.add(Mode.StringLitSubst(tok.span.start))
                 tok
@@ -285,7 +368,7 @@ internal class Lexer(val src: Source, val diag: Diag) {
             }
         }
 
-        val start = pos
+        val start = buf.pos
         var identKind: IdentKind? = null
         var tok2: Token? = null
         val tok = when (val c = nextChar()) {
@@ -366,11 +449,11 @@ internal class Lexer(val src: Source, val diag: Diag) {
                     is Mode.StringLit -> unreachable()
                     is Mode.StringLitSubst -> {
                         if (mode.level == 0) {
-                            val end = src.text.indexOf('}', pos)
+                            val end = src.text.indexOf('}', buf.pos)
                             if (end == -1) {
                                 fatal(Span(mode.start, src.text.length), "unterminated string subst")
                             }
-                            pos = end + 1
+                            buf.pos = end + 1
                             modeStack.removeLast()
                             check(mode() is Mode.StringLit)
                             Token.STRING_LIT_SUBST_END
@@ -564,11 +647,11 @@ internal class Lexer(val src: Source, val diag: Diag) {
                 if (isEof()) {
                     Token.EOF
                 } else {
-                    fatal(Span(start, pos), "invalid character")
+                    fatal(Span(start, buf.pos), "invalid character")
                 }
             }
         }
-        return S(Span(start, pos), tok)
+        return S(Span(start, buf.pos), tok)
     }
 
     private enum class FloatPart {
@@ -670,7 +753,7 @@ internal class Lexer(val src: Source, val diag: Diag) {
     }
 
     private fun keywordOrIdent(start: Int, identKind: IdentKind): Token {
-        val span = Span(start, pos)
+        val span = Span(start, buf.pos)
         val ident = ident(span)
         if (identKind == IdentKind.RAW) {
             when (ident.value) {
@@ -745,11 +828,11 @@ internal class Lexer(val src: Source, val diag: Diag) {
 
     private fun label(start: Int) {
         if (!isIdentStart(nextChar())) {
-            fatal(Span(start, pos), "invalid label")
+            fatal(Span(start, buf.pos), "invalid label")
         }
         advanceWhile { isIdentMiddle(it) }
-        if (pos - start == 2 && src.text[pos - 1] == '_') {
-            error(Span(start, pos), "invalid label")
+        if (buf.pos - start == 2 && src.text[buf.pos - 1] == '_') {
+            error(Span(start, buf.pos), "invalid label")
         }
     }
 
@@ -778,9 +861,9 @@ internal class Lexer(val src: Source, val diag: Diag) {
     }
 
     private fun stringLitNext(): S<Token> {
-        val start = pos
+        val start = buf.pos
         val tok = scanString()
-        return S(Span(start, pos), tok)
+        return S(Span(start, buf.pos), tok)
     }
 
     private fun scanString(): Token {
@@ -797,12 +880,12 @@ internal class Lexer(val src: Source, val diag: Diag) {
                 return if (charLit) Token.CHAR_LIT else Token.STRING_LIT
             }
             when (nextChar()) {
-                EOF -> fatal(Span(start, pos), "unterminated ${if (charLit) "character" else "string"} literal")
+                EOF -> fatal(Span(start, buf.pos), "unterminated ${if (charLit) "character" else "string"} literal")
                 delim -> {
                     val end = rawLen == null || rawLen == 0 ||
                         ((rawLen - 1) downTo 0).all { nthChar(it) == RAW_MARKER }
                     if (end) {
-                        pos += rawLen ?: 0
+                        buf.pos += rawLen ?: 0
                         return if (charLit) {
                             Token.CHAR_LIT
                         } else {
@@ -819,7 +902,7 @@ internal class Lexer(val src: Source, val diag: Diag) {
 
                 }
                 '\r' -> {
-                    val p = pos - 1
+                    val p = buf.pos - 1
                     if (nthChar(0) == '\n') {
                         nextChar()
                     }
@@ -828,14 +911,14 @@ internal class Lexer(val src: Source, val diag: Diag) {
                     }
                 }
                 '\n' -> if (charLit) {
-                    error(Span.one(pos - 1), "newline must be escaped inside character literal")
+                    error(Span.one(buf.pos - 1), "newline must be escaped inside character literal")
                 }
             }
         }
     }
 
     private fun isEof(): Boolean {
-        return pos == src.text.length
+        return buf.pos == src.text.length
     }
 
     private fun advanceWhile(f: (Char) -> Boolean) {
@@ -859,8 +942,8 @@ internal class Lexer(val src: Source, val diag: Diag) {
             if (i == null) {
                 nextChar()
             } else {
-                check(i >= 0 && pos + i <= src.text.length)
-                pos += i
+                check(i >= 0 && buf.pos + i <= src.text.length)
+                buf.pos += i
                 return true
             }
 
@@ -915,7 +998,7 @@ internal class Lexer(val src: Source, val diag: Diag) {
         }
 
         if (depth != 0) {
-            fatal(Span(start, pos), "unterminated comment");
+            fatal(Span(start, buf.pos), "unterminated comment");
         }
 
         return true

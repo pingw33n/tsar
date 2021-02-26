@@ -16,8 +16,8 @@ class LexerTest {
     internal fun parseOk() = listOf(
         "" to "",
         "\u0009\u000B\u000C\u0020" to "",
-        "{}[]():,.=<==== < => >;/|\n\r\n\u0009\u000B\u000C\u0020i dent r#break break" to
-                "{ } [ ] ( ) : , . = <= == = < => > ; / | {NL} {NL} i dent break {KW_BREAK}",
+        "NL_ON {}[]():,.=<==== < => >;/|\n\r\n\u0009\u000B\u000C\u0020i dent r#break break" to
+                "{ } [ ] ( ) : , . = <= == = < => > ; / | {NL} i dent break {KW_BREAK}",
         """ "" "_" "\t\b\n\r\'\"\\" """ to "E{} E{_} E{\t\b\n\r'\"\\}",
         """ "\u{0}\u{000000}\u{00d7ff}\u{e000}\u{10fffF}" """ to "E{\u0000\u0000\ud7ff\ue000\udbff\udfff}",
         """ r"" r#"\t\b\n\r\'\"\\"#  """ to """E{} E{\t\b\n\r\'\"\\}""",
@@ -28,14 +28,14 @@ class LexerTest {
         """ "a\r\n{}\tb\b" """ to "S{a\r\n} {SS} SE{} E{\tb\b}",
         """ "a\r\n{:}\tb\b" """ to "S{a\r\n} {SS} SE{} E{\tb\b}",
         """ "a\r\n{: "format"\n\r :x-:}\tb\b" """ to "S{a\r\n} {SS} SE{ \"format\"\\n\\r :x-:} E{\tb\b}",
-        """ "a{"b{("c": d)${'\n'}:${"\t"}inner${"\r\n"}}d":outer}e" """ to
+        """NL_ON "a{"b{("c": d)${'\n'}:${"\t"}inner${"\r\n"}}d":outer}e" """ to
             "S{a} {SS} S{b} {SS} ( E{c} : d ) {NL} SE{\tinner\r\n} E{d} SE{outer} E{e}",
         """ r"{}" r###"##{###}#"### """ to "E{{}} E{##{###}#}",
-        "//\n\r\n" to "{NL} {NL}",
+        "NL_ON //\n\r\n" to "{NL}",
         "/*\n\r\n*/" to "",
-        "foo // bar  \n  foo ( /* bar (/* !!! */) )\r\n*/)" to "foo {NL} foo ( )",
+        "NL_ON foo // bar  \n  foo ( /* bar (/* !!! */) )\r\n*/)" to "foo {NL} foo ( )",
         "'a'' ''\t''\b''\\u{10fffF}'" to "C{61} C{20} C{9} C{8} C{10ffff}",
-        "\n\r\r\n\n\r" to "{NL} {NL} {NL} {NL} {NL}",
+        "NL_ON \n|\r|\r\n|\n|\r" to "{NL} | {NL} | {NL} | {NL} | {NL}",
         "\"\n\r\r\n\n\r\"" to "E{\n\n\n\n\n}",
         "_ _foobar" to "{KW_UNDERSCORE} _foobar",
         "0 042 00_00_0_42 -42 340282366920938463463374607431768211455 9999999999999999999999999999999999999999" to
@@ -284,7 +284,8 @@ class LexerTest {
             1.04308485241983990666713401708072175773165034278685682646111762292409330928739751702404658197872319129036519947435319418387839758990478549477777586673075945844895981012024387992135617064532141489278815239849108105951619997829153633535314849999674266169258928940692239684771590065027025835804863585454872499320500023126142553932654370362024104462255244034053203998964360882487378334860197725139151265590832887433736189468858614521708567646743455601905935595381852723723645799866672558576993978025033590728687206296379801363024094048327273913079612469982585674824156000783167963081616214710691759864332339239688734656548790656486646106983450809073750535624894296242072010195710276073042036425579852459556183541199012652571123898996574563824424330960027873516082763671875E-308
             10.900000000000000012345678912345678912345
         """.replace(Regex("\\s+"), " ").trim(),
-        "#l #break #__Label_0__9" to "L{l} L{break} L{__Label_0__9}"
+        "#l #break #__Label_0__9" to "L{l} L{break} L{__Label_0__9}",
+        "1\n! NL_ON 2\n! NL_OFF 3\n! NL_POP 4\n! NL_POP 5\n!" to "1 ! 2 {NL} ! 3 ! 4 {NL} ! 5 !",
         ).mapIndexed { i, (inp, exp) ->
             dynamicTest("$i") {
                 parseOk(i, inp, exp)
@@ -350,6 +351,7 @@ class LexerTest {
                 if (inp != null) {
                     val diag = Diag()
                     val lex = Lexer(Source(inp, Path.of("test")), diag)
+                    lex.pushNlMode(Lexer.NlMode.ALLOW)
                     assertEquals(tok, lex.next().value)
                     assertEquals(Token.EOF, lex.next().value)
                     assertTrue(diag.reports.isEmpty()) { diag.toString() }
@@ -367,6 +369,22 @@ class LexerTest {
                 lex.next()
             } catch (_: ParseException) {
                 break
+            }
+            if (tok.value == Token.IDENT) {
+                when (lex.ident(tok.span).value) {
+                    "NL_ON" -> {
+                        lex.pushNlMode(Lexer.NlMode.ALLOW)
+                        continue
+                    }
+                    "NL_OFF" -> {
+                        lex.pushNlMode(Lexer.NlMode.SKIP)
+                        continue
+                    }
+                    "NL_POP" -> {
+                        lex.popNlMode()
+                        continue
+                    }
+                }
             }
             val s = toString(lex, tok) ?: break
             if (first) {

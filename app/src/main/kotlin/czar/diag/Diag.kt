@@ -12,8 +12,9 @@ data class Report(
     val message: String,
 )
 
-class Diag(val baseDir: Path = Path.of("")) {
+class Diag(val baseDir: Path? = null) {
     private val _reports = mutableListOf<Report>()
+    private val absBaseDir: Path? by lazy { baseDir?.toAbsolutePath() }
 
     val reports: List<Report>
         get() = _reports
@@ -30,7 +31,7 @@ class Diag(val baseDir: Path = Path.of("")) {
             }
             val severity = "error"
             out.append("$severity: ${rep.message}\n")
-            val path = baseDir.relativize(rep.source.location)
+            val path = absBaseDir?.relativize(rep.source.location.toAbsolutePath()) ?: rep.source.location
             if (!rep.span.isEmpty()) {
                 val hi_line = HiLine.fromSpan(rep.span, rep.source);
                 out.append("  --> $path:${hi_line.num}:${hi_line.col_start + 1}\n")

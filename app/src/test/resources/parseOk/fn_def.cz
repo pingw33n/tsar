@@ -1,0 +1,53 @@
+fn foo() {}
+pub fn foo() {}
+unsafe fn foo() {}
+pub unsafe fn foo() {}
+pub unsafe fn foo(s: u8) -> i32 {}
+
+pub
+    fn
+main(
+	)
+{
+    }
+
+fn foo_bar<
+    T,
+    U,
+    V,
+    >
+    (
+    p1
+    :
+    u32
+    ,
+    label2
+    p2
+    :
+    std
+    ::
+    T
+    <
+    U
+    <
+    V
+    >>,
+    _ p3: super::super::bar<T>::T<>,
+    ) -> package::test::R
+{
+}
+
+fn foo(a: ()) -> () {}
+fn foo(a: (u32,)) -> (T,) {}
+fn foo(a: (A: u32)) -> (b: T, c: D) {}
+fn foo(s: &str) {}
+
+fn f(
+  self,
+  _ unnamed: u32,
+  arg1: u32,
+  fn name: u32,
+  _ unnamed2: u32,
+) {}
+
+fn f(&self) {}
