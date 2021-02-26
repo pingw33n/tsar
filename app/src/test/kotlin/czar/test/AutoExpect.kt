@@ -85,7 +85,7 @@ class AutoExpect private constructor(): AfterEachCallback, BeforeEachCallback {
             "record_all" -> Mode.RECORD_ALL
             else -> throw IllegalArgumentException("Unknown AUTO_EXPECT option: $modeStr")
         }
-        val axDir = REPO_DIR.resolve("app/src/main/resources/autoexpect");
+        val axDir = REPO_DIR.resolve("app/src/test/resources/autoexpect");
         check(Files.isDirectory(axDir))
         val dir = axDir.resolve(context.testClass.get().name
             .removePrefix("czar.")
