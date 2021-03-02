@@ -355,7 +355,6 @@ internal class Lexer(val src: Source, val diag: Diag) {
         }
     }
 
-
     private fun scan(): S<Token>? {
         if (mode() is Mode.StringLit) {
             return if (nthChar(0) == '{') {
@@ -669,12 +668,13 @@ internal class Lexer(val src: Source, val diag: Diag) {
             if (r != null) {
                 nextChar()
             }
-            r ?: Radix.DEC
+            r
         } else {
-            Radix.DEC
-        }
+            null
+        } ?: Radix.DEC
 
         var floatPart = FloatPart.NONE
+        var dotPos: Int? = null
         while (true) {
             when (nthChar(0)) {
                 'e', 'E' -> if (radix == Radix.DEC) {
@@ -693,6 +693,7 @@ internal class Lexer(val src: Source, val diag: Diag) {
                         val next = nthChar(1)
                         if (isDigit(next, Radix.DEC)) {
                             floatPart = FloatPart.FRAC
+                            dotPos = pos
                         } else {
                             // 0.abs
                             // 0..10
@@ -714,10 +715,13 @@ internal class Lexer(val src: Source, val diag: Diag) {
             }
             nextChar()
         }
-        return if (floatPart == FloatPart.NONE) {
-            Token.INT_LIT
-        } else {
-            Token.FLOAT_LIT
+        return when (floatPart) {
+            FloatPart.NONE -> Token.INT_LIT
+            FloatPart.FRAC -> {
+                pos = dotPos!!
+                Token.INT_LIT
+            }
+            else -> Token.FLOAT_LIT
         }
     }
 
