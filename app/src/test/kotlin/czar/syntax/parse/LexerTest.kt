@@ -481,7 +481,7 @@ class LexerTest {
             Token.DOT2,
             Token.DOT3,
             Token.EQ,
-            Token.EQ_EQ,
+            Token.EQ2,
             Token.EQ_GT,
             Token.GT,
             Token.GT2_EQ,

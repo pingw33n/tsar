@@ -68,6 +68,15 @@ internal class Lexer(val src: Source, val diag: Diag) {
         nlModeStack.removeLast()
     }
 
+    inline fun <T>withNlMode(nlMode: NlMode, f: () -> T): T {
+        pushNlMode(nlMode)
+        try {
+            return f()
+        } finally {
+            popNlMode()
+        }
+    }
+
     fun next(): S<Token> {
         val r = at(0)
         popBuf()
@@ -486,7 +495,7 @@ internal class Lexer(val src: Source, val diag: Diag) {
                 }
                 '=' -> {
                     nextChar()
-                    Token.EQ_EQ
+                    Token.EQ2
                 }
                 else -> Token.EQ
             }

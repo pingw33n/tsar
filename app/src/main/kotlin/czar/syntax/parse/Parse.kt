@@ -34,7 +34,7 @@ enum class Token {
     DOT3,
     EOF,
     EQ,
-    EQ_EQ,
+    EQ2,
     EQ_GT,
     FLOAT_LIT,
     GT,
@@ -176,7 +176,7 @@ enum class Token {
         DOT3,
         EOF,
         EQ,
-        EQ_EQ,
+        EQ2,
         EQ_GT,
         FLOAT_LIT,
         GT,
@@ -245,7 +245,7 @@ enum class Token {
             DOT2_EQ -> "..="
             DOT3 -> "..."
             EQ -> "="
-            EQ_EQ -> "=="
+            EQ2 -> "=="
             EQ_GT -> "=>"
             GT -> ">"
             GT2 -> ">>"
@@ -331,6 +331,158 @@ enum class Token {
 
 internal class ParseException: RuntimeException()
 
+private data class ExprCtx(
+    val prec: PrecGroup = PrecGroup.LOWEST,
+    val opChain: MutableList<S<OpKind>> = mutableListOf(),
+) {
+    fun operand(prec: PrecGroup): ExprCtx {
+        return copy(prec = prec)
+    }
+}
+
+enum class OpAssoc {
+    LEFT_TO_RIGHT,
+    RIGHT_TO_LEFT,
+}
+
+enum class PrecGroup(
+    val prec: Int,
+    val assoc: OpAssoc = OpAssoc.LEFT_TO_RIGHT,
+): Comparable<PrecGroup> {
+    SELECTOR(180),
+    FN_CALL(170),
+    UNARY_POSTFIX(160),
+    UNARY_PREFIX(150, OpAssoc.RIGHT_TO_LEFT),
+    AS(140),
+    MUL(130),
+    ADD(120),
+    BIT_SHIFT(110),
+    BIT_AND(100),
+    BIT_XOR(90),
+    BIT_OR(80),
+    CMP(70),
+    AND(60),
+    OR(50),
+    RANGE(40),
+    ASSIGN(30, OpAssoc.RIGHT_TO_LEFT),
+    LOWEST(0),
+    ;
+
+    fun isLowerThan(other: PrecGroup): Boolean {
+        return when (other.assoc) {
+            OpAssoc.LEFT_TO_RIGHT -> prec <= other.prec
+            OpAssoc.RIGHT_TO_LEFT -> prec < other.prec
+        }
+    }
+}
+
+private sealed class OpKind {
+    abstract fun prec(): PrecGroup
+
+    abstract override fun toString(): String
+
+    object As: OpKind() {
+        override fun prec() = PrecGroup.AS
+        override fun toString() = "`as` expression"
+    }
+
+    data class Binary(val value: Expr.BinaryOp.Kind): OpKind() {
+        override fun prec(): PrecGroup {
+            return when (value) {
+                Expr.BinaryOp.Kind.ADD_ASSIGN,
+                Expr.BinaryOp.Kind.ASSIGN,
+                Expr.BinaryOp.Kind.BIT_AND_ASSIGN,
+                Expr.BinaryOp.Kind.BIT_OR_ASSIGN,
+                Expr.BinaryOp.Kind.BIT_XOR_ASSIGN,
+                Expr.BinaryOp.Kind.DIV_ASSIGN,
+                Expr.BinaryOp.Kind.MUL_ASSIGN,
+                Expr.BinaryOp.Kind.OF_ADD_ASSIGN,
+                Expr.BinaryOp.Kind.OF_MUL_ASSIGN,
+                Expr.BinaryOp.Kind.OF_SUB_ASSIGN,
+                Expr.BinaryOp.Kind.REM_ASSIGN,
+                Expr.BinaryOp.Kind.SHL_ASSIGN,
+                Expr.BinaryOp.Kind.SHR_ASSIGN,
+                Expr.BinaryOp.Kind.SUB_ASSIGN,
+                -> PrecGroup.ASSIGN
+
+                Expr.BinaryOp.Kind.ADD,
+                Expr.BinaryOp.Kind.OF_ADD,
+                Expr.BinaryOp.Kind.OF_SUB,
+                Expr.BinaryOp.Kind.SUB,
+                -> PrecGroup.ADD
+
+                Expr.BinaryOp.Kind.AND -> PrecGroup.AND
+                Expr.BinaryOp.Kind.OR -> PrecGroup.OR
+                Expr.BinaryOp.Kind.BIT_AND -> PrecGroup.BIT_AND
+                Expr.BinaryOp.Kind.BIT_OR -> PrecGroup.BIT_OR
+                Expr.BinaryOp.Kind.BIT_XOR -> PrecGroup.BIT_XOR
+
+                Expr.BinaryOp.Kind.DIV,
+                Expr.BinaryOp.Kind.MUL,
+                Expr.BinaryOp.Kind.OF_MUL,
+                Expr.BinaryOp.Kind.REM,
+                -> PrecGroup.MUL
+
+                Expr.BinaryOp.Kind.EQ,
+                Expr.BinaryOp.Kind.GT,
+                Expr.BinaryOp.Kind.GT_EQ,
+                Expr.BinaryOp.Kind.LT,
+                Expr.BinaryOp.Kind.LT_EQ,
+                Expr.BinaryOp.Kind.NOT_EQ,
+                -> PrecGroup.CMP
+
+                Expr.BinaryOp.Kind.RANGE_EXCL,
+                Expr.BinaryOp.Kind.RANGE_INCL,
+                -> PrecGroup.RANGE
+
+                Expr.BinaryOp.Kind.SHL,
+                Expr.BinaryOp.Kind.SHR,
+                -> PrecGroup.BIT_SHIFT
+            }
+        }
+
+        override fun toString() = "`${value.toString()}`"
+    }
+
+    object FnCall: OpKind() {
+        override fun prec() = PrecGroup.FN_CALL
+        override fun toString() = "function call"
+    }
+
+    object Index: OpKind() {
+        override fun prec() = PrecGroup.FN_CALL
+        override fun toString() = "indexing expression"
+    }
+
+    object Range: OpKind() {
+        override fun prec() = PrecGroup.RANGE
+        override fun toString() = "range expression"
+    }
+
+    object Selector: OpKind() {
+        override fun prec() = PrecGroup.SELECTOR
+        override fun toString() = "selector expression"
+    }
+
+    data class Unary(val value: Expr.UnaryOp.Kind): OpKind() {
+        override fun prec(): PrecGroup {
+            return when (value) {
+                Expr.UnaryOp.Kind.ADDR_OF,
+                Expr.UnaryOp.Kind.DEREF,
+                Expr.UnaryOp.Kind.NEG,
+                Expr.UnaryOp.Kind.NOT,
+                -> PrecGroup.UNARY_PREFIX
+
+                Expr.UnaryOp.Kind.PANICKING_UNWRAP,
+                Expr.UnaryOp.Kind.PROPAGATING_UNWRAP,
+                -> PrecGroup.UNARY_POSTFIX
+            }
+        }
+
+        override fun toString() = "`${value.toString()}`"
+    }
+}
+
 private class Parser(val src: Source, val diag: Diag) {
     private val lex = Lexer(src, diag)
     private val spans: MutableMap<Node.Id<*>, Span> = mutableMapOf()
@@ -345,8 +497,11 @@ private class Parser(val src: Source, val diag: Diag) {
 
     private fun moduleItems(): List<Module.Item> {
         val items = mutableListOf<Module.Item>()
-        while (true) {
-            val item = moduleItem() ?: break
+        while (!isPrefix(Token.EOF)) {
+            val item = moduleItem()
+            if (item == null) {
+                unexpected(lex.at(0), "module item")
+            }
             items.add(item)
         }
         return items
@@ -369,9 +524,7 @@ private class Parser(val src: Source, val diag: Diag) {
             isPrefix(Token.KW_PUB, Token.KW_UNSAFE, Token.KW_FN)
             -> Module.Item.FnDef(fnDef())
 
-            isPrefix(Token.EOF) -> null
-
-            else -> unexpected(lex.at(0), "module item")
+            else -> null
         }
     }
 
@@ -473,14 +626,35 @@ private class Parser(val src: Source, val diag: Diag) {
         }
     }
 
-    private fun block(): Block? {
+    private fun block(): Block {
+        val span = spanner()
         expect(Token.BRACE_OPEN)
-        if (lex.at(0).value != Token.BRACE_CLOSE) {
-            TODO()
-        }
+        lex.pushNlMode(Lexer.NlMode.ALLOW)
         val items = mutableListOf<Block.Item>()
-        expect(Token.BRACE_CLOSE)
-        return Block(items)
+        while (true) {
+            if (maybe(Token.NL) != null) {
+                continue
+            }
+            if (maybe(Token.BRACE_CLOSE) != null) {
+                break
+            }
+
+            val moduleItem = moduleItem()
+            if (moduleItem != null) {
+                items.add(Block.Item.ModuleItem(moduleItem))
+                continue
+            }
+
+            val expr = maybeExpr()
+            if (expr != null) {
+                items.add(Block.Item.Expr(expr))
+                continue
+            }
+
+            unexpected(lex.at(0), "module item or expression")
+        }
+        lex.popNlMode()
+        return spanned(span(), Block(items))
     }
 
     private fun typeExpr(): TypeExpr {
@@ -492,7 +666,7 @@ private class Parser(val src: Source, val diag: Diag) {
                 maybe(Token.BRACKET_OPEN) != null -> {
                     val item = typeExpr()
                     val len = if (maybe(Token.SEMI) != null) {
-                        expr()
+                        maybeExpr()
                     } else {
                         null
                     }
@@ -524,12 +698,320 @@ private class Parser(val src: Source, val diag: Diag) {
         } else {
             TypeExpr.Path(path)
         }
-        spans.setOnce(node.id, span())
+        return spanned(span(), node)
+    }
+
+    private fun <T: Node>spanned(span: Span, node: T): T {
+        spans.setOnce(node.id, span)
         return node
     }
 
-    private fun expr(): Expr? {
-        TODO("Not yet implemented")
+    private fun intLit(): Expr.Int {
+        val tok = lex.next()
+        check(tok.value == Token.INT_LIT)
+        val span = tok.span
+        return spanned(span, Expr.Int(lex.intLit(span)))
+    }
+
+    private fun floatLit(): Expr.Float? {
+        val span = when (lex.at(0).value) {
+            Token.INT_LIT -> {
+                val first = lex.next()
+                val dot = lex.at(0)
+                val int = lex.at(1)
+                if (dot.value == Token.DOT &&
+                    int.value == Token.INT_LIT &&
+                    dot.span.start == first.span.end &&
+                    int.span.start == dot.span.end) {
+                    Span(first.span.start, int.span.end)
+                } else {
+                    first.span
+                }
+            }
+            Token.FLOAT_LIT -> lex.next().span
+            else -> return null
+        }
+        return spanned(span, Expr.Float(lex.floatLit(span)))
+    }
+
+    private fun maybeExpr(ctx: ExprCtx = ExprCtx()): Expr? {
+        var span = spanner()
+
+        val leftOpKind = when (lex.at(0).value) {
+            Token.DASH -> OpKind.Unary(Expr.UnaryOp.Kind.NEG)
+            Token.STAR -> OpKind.Unary(Expr.UnaryOp.Kind.DEREF)
+            Token.AMP, Token.AMP2 -> OpKind.Unary(Expr.UnaryOp.Kind.ADDR_OF)
+            Token.KW_NOT -> OpKind.Unary(Expr.UnaryOp.Kind.NOT)
+            else -> null
+        }
+        if (leftOpKind != null) {
+            ctx.opChain.add(S(lex.at(0).span, leftOpKind))
+        }
+        var left = when (leftOpKind) {
+            is OpKind.Unary -> unaryOp(span, leftOpKind.value, arg = null, ctx)
+            else -> null
+        } ?: when (lex.at(0).value) {
+            Token.FLOAT_LIT -> floatLit()!!
+            Token.INT_LIT -> floatLit() ?: intLit()
+            Token.PAREN_OPEN -> {
+                lex.next()
+                val explicitTuple = if (isPrefix(Token.INT_LIT, Token.COLON)) {
+                    val sp = spanner()
+                    val zeroSpan = lex.next().span
+                    val zero = lex.ident(zeroSpan)
+                    if (zero.value != "0") {
+                        error(zeroSpan, "expected `0` to mark explicit tuple literal")
+                    }
+                    lex.next()
+                    S(sp(), Unit)
+                } else {
+                    null
+                }
+                val expr = lex.withNlMode(Lexer.NlMode.SKIP) {
+                    if (explicitTuple == null) {
+                        maybeExpr()
+                    } else {
+                        expr()
+                    }
+                }
+                if (expr == null || maybe(Token.COMMA) != null) {
+                    TODO("tuple/record")
+                }
+                expect(Token.PAREN_CLOSE)
+                expr
+            }
+            else -> {
+                val path = maybePath(import = false) ?: return null
+                spanned(span(), Expr.Path(path))
+            }
+        }
+
+        while (true) {
+            if (isPrefix(Token.NL, Token.DOT)) {
+                lex.next()
+            }
+
+            val opKind = when (lex.at(0).value) {
+                Token.AMP -> Expr.BinaryOp.Kind.BIT_AND
+                Token.AMP2 -> Expr.BinaryOp.Kind.AND
+                Token.AMP_EQ -> Expr.BinaryOp.Kind.BIT_AND_ASSIGN
+                Token.BANG_EQ -> Expr.BinaryOp.Kind.NOT_EQ
+                Token.DASH -> Expr.BinaryOp.Kind.SUB
+                Token.DASH_EQ -> Expr.BinaryOp.Kind.SUB_ASSIGN
+                Token.DASH_PERCENT -> Expr.BinaryOp.Kind.OF_SUB
+                Token.DASH_PERCENT_EQ -> Expr.BinaryOp.Kind.OF_SUB_ASSIGN
+                Token.DOT2 -> Expr.BinaryOp.Kind.RANGE_EXCL
+                Token.DOT2_EQ -> Expr.BinaryOp.Kind.RANGE_INCL
+                Token.EQ -> Expr.BinaryOp.Kind.ASSIGN
+                Token.EQ2 -> Expr.BinaryOp.Kind.EQ
+                Token.GT -> Expr.BinaryOp.Kind.GT
+                Token.GT2 -> Expr.BinaryOp.Kind.SHR
+                Token.GT2_EQ -> Expr.BinaryOp.Kind.SHR_ASSIGN
+                Token.GT_EQ -> Expr.BinaryOp.Kind.GT_EQ
+                Token.HAT -> Expr.BinaryOp.Kind.BIT_XOR
+                Token.HAT_EQ -> Expr.BinaryOp.Kind.BIT_XOR_ASSIGN
+                Token.LT -> Expr.BinaryOp.Kind.LT
+                Token.LT2 -> Expr.BinaryOp.Kind.SHL
+                Token.LT2_EQ -> Expr.BinaryOp.Kind.SHL_ASSIGN
+                Token.LT_EQ -> Expr.BinaryOp.Kind.LT_EQ
+                Token.PERCENT -> Expr.BinaryOp.Kind.REM
+                Token.PERCENT_EQ -> Expr.BinaryOp.Kind.REM_ASSIGN
+                Token.PIPE -> Expr.BinaryOp.Kind.BIT_OR
+                Token.PIPE2 -> Expr.BinaryOp.Kind.OR
+                Token.PIPE_EQ -> Expr.BinaryOp.Kind.BIT_OR_ASSIGN
+                Token.PLUS -> Expr.BinaryOp.Kind.ADD
+                Token.PLUS_EQ -> Expr.BinaryOp.Kind.ADD_ASSIGN
+                Token.PLUS_PERCENT -> Expr.BinaryOp.Kind.OF_ADD
+                Token.PLUS_PERCENT_EQ -> Expr.BinaryOp.Kind.OF_ADD_ASSIGN
+                Token.SLASH -> Expr.BinaryOp.Kind.DIV
+                Token.SLASH_EQ -> Expr.BinaryOp.Kind.DIV_ASSIGN
+                Token.STAR -> Expr.BinaryOp.Kind.MUL
+                Token.STAR_EQ -> Expr.BinaryOp.Kind.MUL_ASSIGN
+                Token.STAR_PERCENT -> Expr.BinaryOp.Kind.OF_MUL
+                Token.STAR_PERCENT_EQ -> Expr.BinaryOp.Kind.OF_MUL_ASSIGN
+                else -> null
+            }?.let { OpKind.Binary(it) } ?: when (lex.at(0).value) {
+                Token.BANG -> Expr.UnaryOp.Kind.PANICKING_UNWRAP
+                Token.QUEST -> Expr.UnaryOp.Kind.PROPAGATING_UNWRAP
+                else -> null
+            }?.let { OpKind.Unary(it) } ?: when (lex.at(0).value) {
+                Token.KW_AS,
+                Token.KW_AS_PERCENT,
+                Token.KW_AS_BANG,
+                -> OpKind.As
+
+                Token.DOT -> OpKind.Selector
+                Token.DOT2, Token.DOT2_EQ -> OpKind.Range
+
+                Token.BRACKET_OPEN -> OpKind.Index
+
+                else -> {
+                    checkOpChain(ctx.opChain)
+                    break
+                }
+            }
+
+            val nextPrec = opKind.prec()
+
+            if (nextPrec.isLowerThan(ctx.prec)) {
+                break
+            }
+
+            ctx.opChain.add(S(lex.at(0).span, opKind))
+
+            val nextCtx = ctx.operand(nextPrec)
+
+            left = when (opKind) {
+                OpKind.As -> {
+                    lex.next()
+                    val type = typeExpr()
+                    spanned(span(), Expr.As(left, type))
+                }
+                is OpKind.Binary -> binaryOp(span, opKind.value, left, nextCtx)
+                OpKind.Range -> TODO()
+                OpKind.Selector -> {
+                    lex.next()
+                    val name = if (lex.at(0).value == Token.INT_LIT) {
+                        val sp = lex.at(0).span
+                        S(sp, lex.ident(sp))
+                    } else {
+                        ident()
+                    }
+                    spanned(span(), Expr.Selector(left, name))
+                }
+                is OpKind.Unary -> unaryOp(span, opKind.value, left, nextCtx)
+                OpKind.FnCall -> TODO()
+                OpKind.Index -> {
+                    lex.next().also { check(it.value == Token.BRACKET_OPEN) }
+                    val index = lex.withNlMode(Lexer.NlMode.SKIP) { expr() }
+                    expect(Token.BRACKET_CLOSE)
+                    spanned(span(), Expr.Index(left, index))
+                }
+            }
+
+            span = spanner()
+        }
+
+        return left
+    }
+
+    private fun checkOpChain(opChain: MutableList<S<OpKind>>) {
+        while (opChain.size >= 2) {
+            val a = opChain[0].value
+            val b = opChain[1].value
+            when {
+                a.prec() == PrecGroup.CMP && b.prec() == PrecGroup.CMP ->
+                    error(opChain[1].span, "comparison operators can't be directly chained")
+                a is OpKind.As -> if (!canFollowAsOp(b)) {
+                    error(opChain[1].span, "${OpKind.As} can't be directly followed by $b")
+                }
+            }
+
+            opChain.removeAt(0)
+        }
+    }
+
+    private fun canFollowAsOp(op: OpKind): Boolean {
+        return when (op) {
+            is OpKind.As,
+            is OpKind.Range,
+            -> true
+
+            is OpKind.Selector,
+            OpKind.FnCall,
+            -> false
+
+            is OpKind.Binary -> when (op.value) {
+                Expr.BinaryOp.Kind.ADD,
+                Expr.BinaryOp.Kind.ADD_ASSIGN,
+                Expr.BinaryOp.Kind.AND,
+                Expr.BinaryOp.Kind.ASSIGN,
+                Expr.BinaryOp.Kind.BIT_AND,
+                Expr.BinaryOp.Kind.BIT_AND_ASSIGN,
+                Expr.BinaryOp.Kind.BIT_OR,
+                Expr.BinaryOp.Kind.BIT_OR_ASSIGN,
+                Expr.BinaryOp.Kind.BIT_XOR,
+                Expr.BinaryOp.Kind.BIT_XOR_ASSIGN,
+                Expr.BinaryOp.Kind.DIV,
+                Expr.BinaryOp.Kind.DIV_ASSIGN,
+                Expr.BinaryOp.Kind.EQ,
+                Expr.BinaryOp.Kind.GT,
+                Expr.BinaryOp.Kind.GT_EQ,
+                Expr.BinaryOp.Kind.LT,
+                Expr.BinaryOp.Kind.LT_EQ,
+                Expr.BinaryOp.Kind.MUL,
+                Expr.BinaryOp.Kind.MUL_ASSIGN,
+                Expr.BinaryOp.Kind.NOT_EQ,
+                Expr.BinaryOp.Kind.OF_ADD,
+                Expr.BinaryOp.Kind.OF_ADD_ASSIGN,
+                Expr.BinaryOp.Kind.OF_MUL,
+                Expr.BinaryOp.Kind.OF_MUL_ASSIGN,
+                Expr.BinaryOp.Kind.OF_SUB,
+                Expr.BinaryOp.Kind.OF_SUB_ASSIGN,
+                Expr.BinaryOp.Kind.OR,
+                Expr.BinaryOp.Kind.RANGE_EXCL,
+                Expr.BinaryOp.Kind.RANGE_INCL,
+                Expr.BinaryOp.Kind.REM,
+                Expr.BinaryOp.Kind.REM_ASSIGN,
+                Expr.BinaryOp.Kind.SHL,
+                Expr.BinaryOp.Kind.SHL_ASSIGN,
+                Expr.BinaryOp.Kind.SHR,
+                Expr.BinaryOp.Kind.SHR_ASSIGN,
+                Expr.BinaryOp.Kind.SUB,
+                Expr.BinaryOp.Kind.SUB_ASSIGN,
+                -> true
+            }
+
+            is OpKind.Unary -> when (op.value) {
+                Expr.UnaryOp.Kind.ADDR_OF,
+                Expr.UnaryOp.Kind.DEREF,
+                Expr.UnaryOp.Kind.NEG,
+                Expr.UnaryOp.Kind.NOT,
+                -> throw IllegalArgumentException()
+
+                Expr.UnaryOp.Kind.PANICKING_UNWRAP,
+                Expr.UnaryOp.Kind.PROPAGATING_UNWRAP,
+                -> false
+            }
+
+            is OpKind.Index -> false
+        }
+    }
+
+    private fun binaryOp(
+        span: () -> Span,
+        kind: Expr.BinaryOp.Kind,
+        left: Expr,
+        ctx: ExprCtx,
+    ): Expr {
+        val kindSpan = lex.next().span
+        maybe(Token.NL)
+        val right = expr(ctx)
+        return spanned(span(), Expr.BinaryOp(S(kindSpan, kind), left, right))
+    }
+
+    private fun expr(ctx: ExprCtx = ExprCtx()): Expr {
+        return maybeExpr(ctx) ?: unexpected(lex.at(0), "expression")
+    }
+
+    private fun unaryOp(span: () -> Span, kind: Expr.UnaryOp.Kind, arg: Expr?, ctx: ExprCtx): Expr.UnaryOp {
+        val kindSpan = (maybeSplit(Token.AMP) ?: lex.next()).span
+        val argu = when (kind) {
+            Expr.UnaryOp.Kind.ADDR_OF,
+            Expr.UnaryOp.Kind.DEREF,
+            Expr.UnaryOp.Kind.NEG,
+            Expr.UnaryOp.Kind.NOT,
+            -> {
+                check(arg == null)
+                maybe(Token.NL)
+                expr(ctx.operand(PrecGroup.UNARY_PREFIX))
+            }
+
+            Expr.UnaryOp.Kind.PANICKING_UNWRAP,
+            Expr.UnaryOp.Kind.PROPAGATING_UNWRAP,
+            -> arg!!
+        }
+        return spanned(span(), Expr.UnaryOp(S(kindSpan, kind), argu))
     }
 
     private fun maybePath(import: Boolean): Path? {
@@ -689,6 +1171,7 @@ private class Parser(val src: Source, val diag: Diag) {
     private fun maybeSplit(tok: Token): S<Token>? {
         val unsplit = when (tok) {
             Token.GT -> Token.GT2
+            Token.AMP -> Token.AMP2
             else -> return maybe(tok)
         }
         val next = lex.at(0)

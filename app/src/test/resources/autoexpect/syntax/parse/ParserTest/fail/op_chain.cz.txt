@@ -1,0 +1,34 @@
+error: comparison operators can't be directly chained
+  --> op_chain.cz:2:17
+2 |     a > (b == c > foo) < 42 > foo as u32.x
+                    ~
+
+error: comparison operators can't be directly chained
+  --> op_chain.cz:2:24
+2 |     a > (b == c > foo) < 42 > foo as u32.x
+                           ~
+
+error: comparison operators can't be directly chained
+  --> op_chain.cz:2:29
+2 |     a > (b == c > foo) < 42 > foo as u32.x
+                                ~
+
+error: `as` expression can't be directly followed by selector expression
+  --> op_chain.cz:2:41
+2 |     a > (b == c > foo) < 42 > foo as u32.x
+                                            ~
+
+error: `as` expression can't be directly followed by indexing expression
+  --> op_chain.cz:6:11
+6 |     x as T[42] as T! as T?
+              ~
+
+error: `as` expression can't be directly followed by `!`
+  --> op_chain.cz:6:20
+6 |     x as T[42] as T! as T?
+                       ~
+
+error: `as` expression can't be directly followed by `?`
+  --> op_chain.cz:6:26
+6 |     x as T[42] as T! as T?
+                             ~

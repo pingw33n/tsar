@@ -145,7 +145,7 @@ data class Path(
     val origin: S<Origin>?,
 
     // foo::bar<T, U>::baz::qux
-    //      ^^^^^^^^^^^^^^
+    // ^^^^^^^^^^^^^^^^^^^
     val prefix: List<S<Item>>,
 
     // foo::bar<T, U>::baz::qux
@@ -158,7 +158,7 @@ data class Path(
         // ::foo
         // package::foo
         // package(bar)::foo
-        data class Package(val name: czar.syntax.hir.Ident?): Origin()
+        data class Package(val name: Ident?): Origin()
 
         // super::super::foo
         data class Super(val count: Int): Origin()
@@ -203,71 +203,122 @@ sealed class Expr: Node() {
     data class Int(val value: BigInteger): Expr()
     data class Float(val value: BigDecimal): Expr()
 
-    sealed class Op: Expr() {
-        data class Binary(
-            val kind: S<Kind>,
-            val left: Expr,
-            val right: Expr,
-        ): Op() {
-            enum class Kind {
-                ADD,
-                ADD_ASSIGN,
-                AND,
-                ASSIGN,
-                BIT_AND,
-                BIT_AND_ASSIGN,
-                BIT_OR,
-                BIT_OR_ASSIGN,
-                BIT_XOR,
-                BIT_XOR_ASSIGN,
-                DIV,
-                DIV_ASSIGN,
-                EQ,
-                GT,
-                GT_EQ,
-                INDEX,
-                LT,
-                LT_EQ,
-                MUL,
-                MUL_ASSIGN,
-                NOT_EQ,
-                OF_ADD,
-                OF_ADD_ASSIGN,
-                OF_MUL,
-                OF_MUL_ASSIGN,
-                OF_SUB,
-                OF_SUB_ASSIGN,
-                OR,
-                RANGE_EXCL,
-                RANGE_INCL,
-                REM,
-                REM_ASSIGN,
-                SHL,
-                SHL_ASSIGN,
-                SHR,
-                SHR_ASSIGN,
-                SUB,
-                SUB_ASSIGN,
-            }
-        }
+    data class BinaryOp(
+        val kind: S<Kind>,
+        val left: Expr,
+        val right: Expr,
+    ): Expr() {
+        enum class Kind {
+            ADD,
+            ADD_ASSIGN,
+            AND,
+            ASSIGN,
+            BIT_AND,
+            BIT_AND_ASSIGN,
+            BIT_OR,
+            BIT_OR_ASSIGN,
+            BIT_XOR,
+            BIT_XOR_ASSIGN,
+            DIV,
+            DIV_ASSIGN,
+            EQ,
+            GT,
+            GT_EQ,
+            LT,
+            LT_EQ,
+            MUL,
+            MUL_ASSIGN,
+            NOT_EQ,
+            OF_ADD,
+            OF_ADD_ASSIGN,
+            OF_MUL,
+            OF_MUL_ASSIGN,
+            OF_SUB,
+            OF_SUB_ASSIGN,
+            OR,
+            RANGE_EXCL,
+            RANGE_INCL,
+            REM,
+            REM_ASSIGN,
+            SHL,
+            SHL_ASSIGN,
+            SHR,
+            SHR_ASSIGN,
+            SUB,
+            SUB_ASSIGN,
+            ;
 
-        data class Unary(
-            val kind: S<Kind>,
-            val arg: Expr,
-        ): Op() {
-            enum class Kind {
-                ADDR_OF,
-                DEREF,
-                NEG,
-                NOT,
-                PANICKING_UNWRAP,
-                PROPAGATING_UNWRAP,
+            override fun toString(): kotlin.String {
+                return when (this) {
+                    ADD -> "+"
+                    ADD_ASSIGN -> "+="
+                    AND -> "&&"
+                    ASSIGN -> "="
+                    BIT_AND -> "&"
+                    BIT_AND_ASSIGN -> "&="
+                    BIT_OR -> "|"
+                    BIT_OR_ASSIGN -> "|="
+                    BIT_XOR -> "^"
+                    BIT_XOR_ASSIGN -> "^="
+                    DIV -> "/"
+                    DIV_ASSIGN -> "/="
+                    EQ -> "=="
+                    GT -> ">"
+                    GT_EQ -> ">="
+                    LT -> "<"
+                    LT_EQ -> "<="
+                    MUL -> "*"
+                    MUL_ASSIGN -> "*="
+                    NOT_EQ -> "!="
+                    OF_ADD -> "+%"
+                    OF_ADD_ASSIGN -> "+%="
+                    OF_MUL -> "*%"
+                    OF_MUL_ASSIGN -> "*%="
+                    OF_SUB -> "-%"
+                    OF_SUB_ASSIGN -> "-%="
+                    OR -> "||"
+                    RANGE_EXCL -> ".."
+                    RANGE_INCL -> "..="
+                    REM -> "%"
+                    REM_ASSIGN -> "%="
+                    SHL -> "<<"
+                    SHL_ASSIGN -> "<<="
+                    SHR -> ">>"
+                    SHR_ASSIGN -> ">>="
+                    SUB -> "-"
+                    SUB_ASSIGN -> "-="
+                }
             }
         }
     }
 
-    data class StructLiteral(
-        val name: Path?,
+    data class UnaryOp(
+        val kind: S<Kind>,
+        val arg: Expr,
+    ): Expr() {
+        enum class Kind {
+            ADDR_OF,
+            DEREF,
+            NEG,
+            NOT,
+            PANICKING_UNWRAP,
+            PROPAGATING_UNWRAP,
+            ;
+
+            override fun toString(): kotlin.String {
+                return when (this) {
+                    ADDR_OF -> "&"
+                    DEREF -> "*"
+                    NEG -> "-"
+                    NOT -> "not"
+                    PANICKING_UNWRAP -> "!"
+                    PROPAGATING_UNWRAP -> "?"
+                }
+            }
+        }
+    }
+
+    data class UnnamedStruct(
         /// Whether the unnamed struct literal had `0:` specifier.
         val tuple: S<Unit>?,
         val fields: List<StructLiteralField>,
@@ -303,20 +354,20 @@ sealed class Expr: Node() {
         }
     }
 
-    data class FieldAccess(
-        val struct: Expr,
-        val name: S<Name>?,
-    ): Expr() {
-        sealed class Name {
-            data class Ident(val value: czar.syntax.hir.Ident): Name()
-            data class Index(val value: kotlin.Int): Name()
-        }
-    }
+    data class Selector(
+        val value: Expr,
+        val name: S<Ident>?,
+    ): Expr()
 
     data class If(
         val cond: Expr,
         val if_true: Block,
         val if_false: Block?,
+    ): Expr()
+
+    data class Index(
+        val value: Expr,
+        val index: Expr,
     ): Expr()
 
     data class As(
@@ -340,10 +391,12 @@ sealed class Expr: Node() {
     }
 
     data class Let(val def: LetDef): Expr()
+
+    data class Path(val value: czar.syntax.hir.Path): Expr()
 }
 
 data class StructLiteralField(
-    val name: S<Ident>?,
+    val name: S<Ident>,
     val value: Expr,
 ): Node()
 

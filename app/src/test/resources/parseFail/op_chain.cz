@@ -1,0 +1,7 @@
+fn f() {
+    a > (b == c > foo) < 42 > foo as u32.x
+}
+
+fn f2() {
+    x as T[42] as T! as T?
+}

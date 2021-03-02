@@ -10,10 +10,12 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.TestFactory
+import org.junit.jupiter.api.extension.ExtendWith
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.streams.asSequence
 
+@ExtendWith(AutoExpect::class)
 class ParserTest {
     @TestFactory
     internal fun ok(): List<DynamicTest> {
@@ -49,8 +51,7 @@ class ParserTest {
     private fun parse(inp: Path): String {
         val diag = Diag(inp.parent)
         val hir = parse(Source(Files.readString(inp), inp), diag)
-        assertTrue(hir != null && diag.reports.isEmpty() ||
-            hir == null && diag.reports.isNotEmpty())
+        assertTrue(hir != null || diag.reports.isNotEmpty())
         return diag.toString()
     }
 }
