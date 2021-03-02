@@ -32,7 +32,8 @@ class AutoExpect private constructor(): AfterEachCallback, BeforeEachCallback {
         }
 
         private fun verify0(subId: String?, actual: CharSequence) {
-            val ctx = CONTEXT.get()
+            val ctx = checkNotNull(CONTEXT.get(),
+                { "No AutoExpect context. Add `@ExtendWith(AutoExpect::class)` to the test class" })
             val file = if (subId == null) {
                 ctx.dir.resolve(ctx.id + ".txt")
             } else {
