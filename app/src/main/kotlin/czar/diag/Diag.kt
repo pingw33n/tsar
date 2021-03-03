@@ -47,8 +47,6 @@ class Diag(val baseDir: Path? = null) {
         print(w)
         return w.toString()
     }
-
-
 }
 
 private data class HiLine(

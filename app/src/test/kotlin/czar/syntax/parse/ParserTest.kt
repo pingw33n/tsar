@@ -22,7 +22,9 @@ class ParserTest {
         return findInputs(Path.of("parseOk"))
             .map { inp ->
                 dynamicTest("${inp.fileName}") {
-                    assertEquals(parse(inp), "")
+                    val (hir, errs) = parse(inp)
+                    assertEquals(errs, "")
+                    AutoExpect.verify(inp.fileName.toString(), hir!!)
                 }
             }
             .toList()
@@ -33,7 +35,7 @@ class ParserTest {
         return findInputs(Path.of("parseFail"))
             .map { inp ->
                 dynamicTest("${inp.fileName}") {
-                    val errs = parse(inp)
+                    val (_, errs) = parse(inp)
                     assertTrue(errs.isNotEmpty())
                     AutoExpect.verify(inp.fileName.toString(), errs)
                 }
@@ -48,10 +50,15 @@ class ParserTest {
             .filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".$FILE_SUFFIX") }
     }
 
-    private fun parse(inp: Path): String {
+    private fun parse(inp: Path): Pair<String?, String> {
         val diag = Diag(inp.parent)
         val hir = parse(Source(Files.readString(inp), inp), diag)
         assertTrue(hir != null || diag.reports.isNotEmpty())
-        return diag.toString()
+        val hirStr = if (hir != null) {
+            hir.printer().copy(relativizePath = TEST_DIR).toString()
+        } else {
+            null
+        }
+        return Pair(hirStr, diag.toString())
     }
 }

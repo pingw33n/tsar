@@ -441,7 +441,7 @@ private sealed class OpKind {
             }
         }
 
-        override fun toString() = "`${value.toString()}`"
+        override fun toString() = "`$value`"
     }
 
     object FnCall: OpKind() {
@@ -479,7 +479,7 @@ private sealed class OpKind {
             }
         }
 
-        override fun toString() = "`${value.toString()}`"
+        override fun toString() = "`$value`"
     }
 }
 
@@ -489,14 +489,14 @@ private class Parser(val src: Source, val diag: Diag) {
 
     fun parse(): Hir {
         val items = moduleItems()
-        val module = Module(src, name = null, pub = null, items)
+        val module = Module(src, name = null, items)
         spans.setOnce(module.id, Span(0, src.text.length))
         // TODO check all Nodes have spans
         return Hir(module, spans)
     }
 
-    private fun moduleItems(): List<Module.Item> {
-        val items = mutableListOf<Module.Item>()
+    private fun moduleItems(): List<ModuleItem> {
+        val items = mutableListOf<ModuleItem>()
         while (!isPrefix(Token.EOF)) {
             val item = moduleItem()
             if (item == null) {
@@ -516,13 +516,13 @@ private class Parser(val src: Source, val diag: Diag) {
         return true
     }
 
-    private fun moduleItem(): Module.Item? {
+    private fun moduleItem(): ModuleItem? {
         return when {
             isPrefix(Token.KW_FN) ||
             isPrefix(Token.KW_UNSAFE, Token.KW_FN) ||
             isPrefix(Token.KW_PUB, Token.KW_FN) ||
             isPrefix(Token.KW_PUB, Token.KW_UNSAFE, Token.KW_FN)
-            -> Module.Item.FnDef(fnDef())
+            -> fnDef()
 
             else -> null
         }
@@ -685,7 +685,8 @@ private class Parser(val src: Source, val diag: Diag) {
                             null
                         }
                         val type = typeExpr()
-                        fields.add(StructBody.Field(pub = null, name, type))
+                        val name_ = name ?: S(spans[type.id]!!, Ident.index(fields.size))
+                        fields.add(StructBody.Field(pub = null, name_, type))
                     }!!
                     if (fields.size == 1 && !record && !hadTrailingComma) {
                         TODO()
@@ -716,16 +717,20 @@ private class Parser(val src: Source, val diag: Diag) {
     private fun floatLit(): Expr.Float? {
         val span = when (lex.at(0).value) {
             Token.INT_LIT -> {
-                val first = lex.next()
-                val dot = lex.at(0)
-                val int = lex.at(1)
+                val int = lex.at(0)
+                val dot = lex.at(1)
+                val frac = lex.at(2)
                 if (dot.value == Token.DOT &&
-                    int.value == Token.INT_LIT &&
-                    dot.span.start == first.span.end &&
-                    int.span.start == dot.span.end) {
-                    Span(first.span.start, int.span.end)
+                    frac.value == Token.INT_LIT &&
+                    dot.span.start == int.span.end &&
+                    frac.span.start == dot.span.end) {
+
+                    lex.next()
+                    lex.next()
+                    lex.next()
+                    Span(int.span.start, frac.span.end)
                 } else {
-                    first.span
+                    return null
                 }
             }
             Token.FLOAT_LIT -> lex.next().span
@@ -1160,10 +1165,10 @@ private class Parser(val src: Source, val diag: Diag) {
         }
     }
 
-    private fun typeParams(): List<TypeParam> {
-        val r = mutableListOf<TypeParam>()
+    private fun typeParams(): List<S<Ident>> {
+        val r = mutableListOf<S<Ident>>()
         commaDelimited(Token.LT, Token.GT) {
-            r.add(TypeParam(ident()))
+            r.add(ident())
         }
         return r
     }

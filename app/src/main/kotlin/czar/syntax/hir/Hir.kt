@@ -3,6 +3,7 @@ package czar.syntax.hir
 import czar.syntax.S
 import czar.syntax.Source
 import czar.syntax.Span
+import czar.syntax.hir.print.Printer
 import czar.syntax.parse.Token
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -16,6 +17,11 @@ inline class Ident(val value: CharSequence) {
         val SELF_LOWER: Ident = Ident(Token.KW_SELF_LOWER.toString())
         val SELF_UPPER: Ident = Ident(Token.KW_SELF_UPPER.toString())
         val UNDERSCORE: Ident = Ident(Token.KW_UNDERSCORE.toString())
+
+        fun index(i: Int): Ident {
+            check(i >= 0)
+            return Ident(i.toString())
+        }
     }
 
     override fun toString(): String {
@@ -51,19 +57,9 @@ sealed class Node {
 data class Module(
     val source: Source?,
     val name: S<Name>?,
-    val pub: S<Pub>?,
-    val items: List<Item>,
-): Node() {
+    val items: List<ModuleItem>,
+): ModuleItem() {
     data class Name(val name: S<Ident>, val pub: S<Pub>?)
-
-    sealed class Item {
-        data class FnDef(val value: czar.syntax.hir.FnDef): Item()
-        data class Impl(val value: czar.syntax.hir.Impl): Item()
-        data class Module(val value: czar.syntax.hir.Module): Item()
-        data class StructDef(val value: czar.syntax.hir.StructDef): Item()
-        data class TypeAlias(val value: czar.syntax.hir.TypeAlias): Item()
-        data class Use(val value: czar.syntax.hir.Use): Item()
-    }
 }
 
 data class Pub(val scope: S<Scope>?) {
@@ -77,7 +73,7 @@ sealed class ModuleItem: Node()
 data class FnDef(
     val pub: S<Pub>?,
     val name: S<Ident>,
-    val typeParams: List<TypeParam>,
+    val typeParams: List<S<Ident>>,
     val params: List<FnParam>,
     val result: TypeExpr?,
     val unsafe: S<Unit>?,
@@ -87,10 +83,10 @@ data class FnDef(
 ): ModuleItem()
 
 data class FnParam(
-    val labelFn: S<Label>?,
+    val label: S<Label>?,
     val name: S<Ident>,
     val type: TypeExpr,
-): ModuleItem() {
+): Node() {
     inline class Label(val value: CharSequence) {
         init {
             require(value.isNotEmpty())
@@ -112,8 +108,6 @@ data class LetDef(
     val type: TypeExpr?,
     val init: Expr?,
 ): Node()
-
-data class TypeParam(val name: S<Ident>): Node()
 
 sealed class TypeExpr: Node() {
     // &T
@@ -137,7 +131,7 @@ sealed class TypeExpr: Node() {
 data class Block(val items: List<Item>): Node() {
     sealed class Item {
         data class Expr(val value: czar.syntax.hir.Expr): Item()
-        data class ModuleItem(val value: Module.Item): Item()
+        data class ModuleItem(val value: czar.syntax.hir.ModuleItem): Item()
     }
 }
 
@@ -182,14 +176,14 @@ data class Path(
 data class StructDef(
     val pub: S<Pub>?,
     val name: S<Ident>,
-    val type_params: List<TypeParam>,
+    val type_params: List<S<Ident>>,
     val body: StructBody,
 ): ModuleItem()
 
-data class StructBody(val fields: List<Field>): Node() {
+data class StructBody(val fields: List<Field>) {
     data class Field(
         val pub: S<Pub>?,
-        val name: S<Ident>?,
+        val name: S<Ident>,
         val type: TypeExpr,
     )
 }
@@ -318,12 +312,6 @@ sealed class Expr: Node() {
         }
     }
 
-    data class UnnamedStruct(
-        /// Whether the unnamed struct literal had `0:` specifier.
-        val tuple: S<Unit>?,
-        val fields: List<StructLiteralField>,
-    ): Expr()
-
     data class Range(
         val inclusive: S<Unit>?,
         val start: Expr?,
@@ -403,10 +391,10 @@ data class StructLiteralField(
 data class Use(
     val pub: S<Pub>?,
     val path: Path,
-): Node()
+): ModuleItem()
 
 data class Impl(
-    val type_params: List<TypeParam>,
+    val typeParams: List<S<Ident>>,
     val trait: Path?,
     val for_: TypeExpr?,
     val items: List<Item>,
@@ -419,10 +407,15 @@ data class Impl(
 data class TypeAlias(
     val pub: S<Pub>?,
     val name: S<Ident>,
-    val typeParams: List<TypeParam>,
+    val typeParams: List<S<Ident>>,
     val type: TypeExpr,
 ): ModuleItem()
 
 data class Hir(
     val root: Module,
-    val spans: Map<Node.Id<*>, Span>)
+    val spans: Map<Node.Id<*>, Span>,
+) {
+    override fun toString(): String = printer().toString()
+
+    fun printer() = Printer(this)
+}

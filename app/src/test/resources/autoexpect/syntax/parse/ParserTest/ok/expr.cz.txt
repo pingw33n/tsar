@@ -1,0 +1,296 @@
+@(0..188) {
+  source: "parseOk/expr.cz"
+  items: [
+    FnDef @(0..76) {
+      name: @(3..5) `f1`
+      body: [
+        Expr {
+          Int @(14..16) {
+            `42`
+          }
+        }
+        Expr {
+          BinaryOp @(21..26) {
+            kind: @(23..24) `ADD`
+            left: Path @(21..22) {
+              @(21..22) {
+                suffix: [
+                  Item @(21..22) {
+                    item: @(21..22) {
+                      name: @(21..22) `a`
+                    }
+                  }
+                ]
+              }
+            }
+            right: Path @(25..26) {
+              @(25..26) {
+                suffix: [
+                  Item @(25..26) {
+                    item: @(25..26) {
+                      name: @(25..26) `b`
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+        Expr {
+          BinaryOp @(31..45) {
+            kind: @(33..34) `ADD`
+            left: Path @(31..32) {
+              @(31..32) {
+                suffix: [
+                  Item @(31..32) {
+                    item: @(31..32) {
+                      name: @(31..32) `a`
+                    }
+                  }
+                ]
+              }
+            }
+            right: BinaryOp @(35..45) {
+              kind: @(37..38) `MUL`
+              left: Path @(35..36) {
+                @(35..36) {
+                  suffix: [
+                    Item @(35..36) {
+                      item: @(35..36) {
+                        name: @(35..36) `b`
+                      }
+                    }
+                  ]
+                }
+              }
+              right: Float @(39..45) {
+                `156.60`
+              }
+            }
+          }
+        }
+        Expr {
+          BinaryOp @(50..74) {
+            kind: @(62..63) `MUL`
+            left: UnaryOp @(50..61) {
+              kind: @(50..53) `NOT`
+              arg: BinaryOp @(55..60) {
+                kind: @(57..58) `ADD`
+                left: Path @(55..56) {
+                  @(55..56) {
+                    suffix: [
+                      Item @(55..56) {
+                        item: @(55..56) {
+                          name: @(55..56) `a`
+                        }
+                      }
+                    ]
+                  }
+                }
+                right: Path @(59..60) {
+                  @(59..60) {
+                    suffix: [
+                      Item @(59..60) {
+                        item: @(59..60) {
+                          name: @(59..60) `b`
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+            right: As @(64..74) {
+              expr: UnaryOp @(64..69) {
+                kind: @(64..65) `NEG`
+                arg: Int @(66..69) {
+                  `100`
+                }
+              }
+              type: Path @(73..74) {
+                @(73..74) {
+                  suffix: [
+                    Item @(73..74) {
+                      item: @(73..74) {
+                        name: @(73..74) `T`
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+    FnDef @(78..125) {
+      name: @(81..83) `f2`
+      body: [
+        Expr {
+          BinaryOp @(92..101) {
+            kind: @(94..95) `ADD`
+            left: Path @(92..93) {
+              @(92..93) {
+                suffix: [
+                  Item @(92..93) {
+                    item: @(92..93) {
+                      name: @(92..93) `a`
+                    }
+                  }
+                ]
+              }
+            }
+            right: Path @(100..101) {
+              @(100..101) {
+                suffix: [
+                  Item @(100..101) {
+                    item: @(100..101) {
+                      name: @(100..101) `b`
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+        Expr {
+          BinaryOp @(106..115) {
+            kind: @(108..109) `SUB`
+            left: Path @(106..107) {
+              @(106..107) {
+                suffix: [
+                  Item @(106..107) {
+                    item: @(106..107) {
+                      name: @(106..107) `a`
+                    }
+                  }
+                ]
+              }
+            }
+            right: Path @(114..115) {
+              @(114..115) {
+                suffix: [
+                  Item @(114..115) {
+                    item: @(114..115) {
+                      name: @(114..115) `b`
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+        Expr {
+          UnaryOp @(120..123) {
+            kind: @(120..121) `NEG`
+            arg: Path @(122..123) {
+              @(122..123) {
+                suffix: [
+                  Item @(122..123) {
+                    item: @(122..123) {
+                      name: @(122..123) `b`
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+    FnDef @(127..188) {
+      name: @(130..132) `f3`
+      body: [
+        Expr {
+          BinaryOp @(156..186) {
+            kind: @(156..157) `ADD`
+            left: BinaryOp @(141..155) {
+              kind: @(144..145) `ADD`
+              left: UnaryOp @(141..143) {
+                kind: @(141..142) `ADDR_OF`
+                arg: Path @(142..143) {
+                  @(142..143) {
+                    suffix: [
+                      Item @(142..143) {
+                        item: @(142..143) {
+                          name: @(142..143) `x`
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+              right: UnaryOp @(146..155) {
+                kind: @(146..147) `ADDR_OF`
+                arg: UnaryOp @(147..155) {
+                  kind: @(147..148) `ADDR_OF`
+                  arg: Index @(148..155) {
+                    value: Path @(148..149) {
+                      @(148..149) {
+                        suffix: [
+                          Item @(148..149) {
+                            item: @(148..149) {
+                              name: @(148..149) `y`
+                            }
+                          }
+                        ]
+                      }
+                    }
+                    index: UnaryOp @(150..154) {
+                      kind: @(150..151) `ADDR_OF`
+                      arg: UnaryOp @(151..154) {
+                        kind: @(151..152) `ADDR_OF`
+                        arg: UnaryOp @(152..154) {
+                          kind: @(152..153) `ADDR_OF`
+                          arg: Path @(153..154) {
+                            @(153..154) {
+                              suffix: [
+                                Item @(153..154) {
+                                  item: @(153..154) {
+                                    name: @(153..154) `z`
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            right: UnaryOp @(158..186) {
+              kind: @(158..159) `ADDR_OF`
+              arg: UnaryOp @(164..186) {
+                kind: @(164..165) `ADDR_OF`
+                arg: Index @(165..186) {
+                  value: Path @(165..168) {
+                    @(165..168) {
+                      suffix: [
+                        Item @(165..168) {
+                          item: @(165..168) {
+                            name: @(165..168) `foo`
+                          }
+                        }
+                      ]
+                    }
+                  }
+                  index: BinaryOp @(169..185) {
+                    kind: @(180..181) `ADD`
+                    left: Int @(169..171) {
+                      `10`
+                    }
+                    right: Int @(182..185) {
+                      `100`
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
