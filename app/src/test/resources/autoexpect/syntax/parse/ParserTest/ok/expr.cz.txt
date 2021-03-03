@@ -1,4 +1,4 @@
-@(0..188) {
+@(0..298) {
   source: "parseOk/expr.cz"
   items: [
     FnDef @(0..76) {
@@ -288,6 +288,142 @@
                 }
               }
             }
+          }
+        }
+      ]
+    }
+    FnDef @(190..298) {
+      name: @(193..194) `f`
+      body: [
+        Expr {
+          Selector @(203..208) {
+            value: Float @(203..206) {
+              `1.2`
+            }
+            name: @(207..208) `3`
+          }
+        }
+        Expr {
+          Selector @(218..220) {
+            value: Selector @(213..218) {
+              value: Float @(213..216) {
+                `1.2`
+              }
+              name: @(217..218) `3`
+            }
+            name: @(219..220) `4`
+          }
+        }
+        Expr {
+          Selector @(232..234) {
+            value: Selector @(230..232) {
+              value: Selector @(225..230) {
+                value: Float @(225..228) {
+                  `1.2`
+                }
+                name: @(229..230) `3`
+              }
+              name: @(231..232) `4`
+            }
+            name: @(233..234) `5`
+          }
+        }
+        Expr {
+          Selector @(239..242) {
+            value: Int @(239..240) {
+              `1`
+            }
+            name: @(241..242) `a`
+          }
+        }
+        Expr {
+          Selector @(247..252) {
+            value: Float @(247..250) {
+              `1.2`
+            }
+            name: @(251..252) `a`
+          }
+        }
+        Expr {
+          Selector @(257..260) {
+            value: Path @(257..258) {
+              @(257..258) {
+                suffix: [
+                  Item @(257..258) {
+                    item: @(257..258) {
+                      name: @(257..258) `a`
+                    }
+                  }
+                ]
+              }
+            }
+            name: @(259..260) `1`
+          }
+        }
+        Expr {
+          Selector @(268..270) {
+            value: Selector @(265..268) {
+              value: Path @(265..266) {
+                @(265..266) {
+                  suffix: [
+                    Item @(265..266) {
+                      item: @(265..266) {
+                        name: @(265..266) `a`
+                      }
+                    }
+                  ]
+                }
+              }
+              name: @(267..268) `1`
+            }
+            name: @(269..270) `2`
+          }
+        }
+        Expr {
+          Selector @(280..282) {
+            value: Selector @(278..280) {
+              value: Selector @(275..278) {
+                value: Path @(275..276) {
+                  @(275..276) {
+                    suffix: [
+                      Item @(275..276) {
+                        item: @(275..276) {
+                          name: @(275..276) `a`
+                        }
+                      }
+                    ]
+                  }
+                }
+                name: @(277..278) `1`
+              }
+              name: @(279..280) `2`
+            }
+            name: @(281..282) `3`
+          }
+        }
+        Expr {
+          Selector @(294..296) {
+            value: Selector @(292..294) {
+              value: Selector @(290..292) {
+                value: Selector @(287..290) {
+                  value: Path @(287..288) {
+                    @(287..288) {
+                      suffix: [
+                        Item @(287..288) {
+                          item: @(287..288) {
+                            name: @(287..288) `a`
+                          }
+                        }
+                      ]
+                    }
+                  }
+                  name: @(289..290) `1`
+                }
+                name: @(291..292) `2`
+              }
+              name: @(293..294) `3`
+            }
+            name: @(295..296) `4`
           }
         }
       ]

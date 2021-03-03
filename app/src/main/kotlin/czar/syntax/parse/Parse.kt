@@ -873,7 +873,7 @@ private class Parser(val src: Source, val diag: Diag) {
                 OpKind.Selector -> {
                     lex.next()
                     val name = if (lex.at(0).value == Token.INT_LIT) {
-                        val sp = lex.at(0).span
+                        val sp = lex.next().span
                         S(sp, lex.ident(sp))
                     } else {
                         ident()
