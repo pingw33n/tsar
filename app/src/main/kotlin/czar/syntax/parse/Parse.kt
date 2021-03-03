@@ -564,14 +564,10 @@ private class Parser(val src: Source, val diag: Diag) {
                 val label = paramName.map { FnParam.Label.SELF }
 
                 val selfSpan = paramName.span
-                val selfPath = Path(null, listOf(S(selfSpan, Path.Item(S(selfSpan, Ident.SELF_UPPER), emptyList()))),
-                    emptyList())
-                spans.setOnce(selfPath.id, selfSpan)
-                val selfType = TypeExpr.Path(selfPath)
-                spans.setOnce(selfType.id, selfSpan)
+                val selfPath = spanned(selfSpan, Path.of(S(selfSpan, Ident.SELF_UPPER)))
+                val selfType = spanned(selfSpan, TypeExpr.Path(selfPath))
                 val type = if (ref != null) {
-                    val n = TypeExpr.Ref(selfType)
-                    spans.setOnce(n.id, paramSpan())
+                    val n = spanned(paramSpan(), TypeExpr.Ref(selfType))
                     n
                 } else {
                     selfType

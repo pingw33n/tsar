@@ -171,6 +171,19 @@ data class Path(
 
         object Star: SuffixItem()
     }
+
+    companion object {
+        fun of(vararg idents: S<Ident>): Path {
+            val prefix = idents.asSequence()
+                .map { S(it.span, Item(it, emptyList())) }
+                .take(idents.size - 1)
+                .toList()
+            val sp = idents.last().span
+            val suffix = listOf(S(sp, SuffixItem.Item(S(sp, Item(idents.last(), emptyList())),
+                renamedAs = null) as SuffixItem))
+            return Path(origin = null, prefix, suffix)
+        }
+    }
 }
 
 data class StructDef(
