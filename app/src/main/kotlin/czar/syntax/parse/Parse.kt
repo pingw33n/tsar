@@ -1,5 +1,6 @@
 package czar.syntax.parse
 
+import czar.Checkpointed
 import czar.diag.Diag
 import czar.diag.Report
 import czar.setOnce
@@ -483,15 +484,57 @@ private sealed class OpKind {
     }
 }
 
+private enum class PathPos {
+    EXPR,
+    IMPORT,
+    TYPE,
+}
+
 private class Parser(val src: Source, val diag: Diag) {
-    private val lex = Lexer(src, diag)
-    private val spans: MutableMap<Node.Id<*>, Span> = mutableMapOf()
+    private class State(
+        private val diag: Diag,
+        val spans: MutableMap<Node.Id<*>, Span> = mutableMapOf(),
+    ): Checkpointed.State<State> {
+        private val initialErrorCount: Int = diag.reports.size
+
+        val newErrorCount: Int
+            get() = diag.reports.size - initialErrorCount
+
+        override fun copy(): State {
+            return State(diag, spans.toMutableMap())
+        }
+    }
+
+    private val checkpointed: Checkpointed<State> = Checkpointed(State(diag))
+    private val lex: Lexer = Lexer(src, diag)
+
+    private val spans
+        get() = checkpointed.state.spans
 
     fun parse(): Hir {
         val items = moduleItems()
         val module = spanned(Span(0, src.text.length), Module(src, name = null, items))
         // TODO check all Nodes have spans
         return Hir(module, spans)
+    }
+
+    private fun checkpoint() {
+        checkpointed.checkpoint()
+        lex.checkpoint()
+        diag.checkpoint()
+
+    }
+
+    private fun rollback() {
+        checkpointed.rollback()
+        lex.rollback()
+        diag.rollback()
+    }
+
+    private fun commit() {
+        checkpointed.commit()
+        lex.commit()
+        diag.commit()
     }
 
     private fun moduleItems(): List<ModuleItem> {
@@ -577,13 +620,13 @@ private class Parser(val src: Source, val diag: Diag) {
                 val label = fnParamLabel()
                 val paramName = ident()
                 expect(Token.COLON)
-                val type = typeExpr()
+                val type = typeExpr(inExprPos = false)
                 FnParam(label, paramName, type)
             }
             params.add(spanned(paramSpan(), node))
         }
         val result = if (maybe(Token.DASH_GT) != null) {
-            typeExpr()
+            typeExpr(inExprPos = false)
         } else {
             null
         }
@@ -621,42 +664,42 @@ private class Parser(val src: Source, val diag: Diag) {
     private fun block(): Block {
         val span = spanner()
         expect(Token.BRACE_OPEN)
-        lex.pushNlMode(Lexer.NlMode.ALLOW)
         val items = mutableListOf<Block.Item>()
-        while (true) {
-            if (maybe(Token.NL) != null) {
-                continue
-            }
-            if (maybe(Token.BRACE_CLOSE) != null) {
-                break
-            }
+        lex.withNlMode(Lexer.NlMode.ALLOW) {
+            while (true) {
+                if (maybe(Token.NL) != null) {
+                    continue
+                }
+                if (maybe(Token.BRACE_CLOSE) != null) {
+                    break
+                }
 
-            val moduleItem = moduleItem()
-            if (moduleItem != null) {
-                items.add(Block.Item.ModuleItem(moduleItem))
-                continue
-            }
+                val moduleItem = moduleItem()
+                if (moduleItem != null) {
+                    items.add(Block.Item.ModuleItem(moduleItem))
+                    continue
+                }
 
-            val expr = maybeExpr()
-            if (expr != null) {
-                items.add(Block.Item.Expr(expr))
-                continue
-            }
+                val expr = maybeExpr()
+                if (expr != null) {
+                    items.add(Block.Item.Expr(expr))
+                    continue
+                }
 
-            unexpected(lex.at(0), "module item or expression")
+                unexpected(lex.at(0), "module item or expression")
+            }
         }
-        lex.popNlMode()
         return spanned(span(), Block(items))
     }
 
-    private fun typeExpr(): TypeExpr {
+    private fun typeExpr(inExprPos: Boolean): TypeExpr {
         val span = spanner()
-        val path = maybePath(import = false)
+        val path = maybePath(if (inExprPos) PathPos.EXPR else PathPos.TYPE)
         val node = if (path == null) {
             when {
-                maybe(Token.AMP) != null -> TypeExpr.Ref(typeExpr())
+                maybe(Token.AMP) != null -> TypeExpr.Ref(typeExpr(inExprPos = false))
                 maybe(Token.BRACKET_OPEN) != null -> {
-                    val item = typeExpr()
+                    val item = typeExpr(inExprPos = false)
                     val len = if (maybe(Token.SEMI) != null) {
                         maybeExpr()
                     } else {
@@ -676,7 +719,7 @@ private class Parser(val src: Source, val diag: Diag) {
                         } else {
                             null
                         }
-                        val type = typeExpr()
+                        val type = typeExpr(inExprPos = false)
                         val name_ = name ?: S(spans[type.id]!!, Ident.index(fields.size))
                         fields.add(StructBody.Field(pub = null, name_, type))
                     }!!
@@ -778,7 +821,7 @@ private class Parser(val src: Source, val diag: Diag) {
                 expr
             }
             else -> {
-                val path = maybePath(import = false) ?: return null
+                val path = maybePath(PathPos.EXPR) ?: return null
                 spanned(span(), Expr.Path(path))
             }
         }
@@ -861,7 +904,7 @@ private class Parser(val src: Source, val diag: Diag) {
             left = when (opKind) {
                 OpKind.As -> {
                     lex.next()
-                    val type = typeExpr()
+                    val type = typeExpr(inExprPos = false)
                     spanned(span(), Expr.As(left, type))
                 }
                 is OpKind.Binary -> binaryOp(span, opKind.value, left, nextCtx)
@@ -1011,7 +1054,7 @@ private class Parser(val src: Source, val diag: Diag) {
         return spanned(span(), Expr.UnaryOp(S(kindSpan, kind), argu))
     }
 
-    private fun maybePath(import: Boolean): Path? {
+    private fun maybePath(pos: PathPos): Path? {
         val span = spanner()
         val origin: S<Path.Origin>? = when (lex.at(0).value) {
             Token.IDENT -> null
@@ -1051,11 +1094,11 @@ private class Parser(val src: Source, val diag: Diag) {
         val prefix = mutableListOf<S<Path.Item>>()
         val suffix = mutableListOf<S<Path.SuffixItem>>()
         while (true) {
-            val suffixItem = maybePathSuffixItem(import)
+            val suffixItem = maybePathSuffixItem(pos)
             if (suffixItem == null) {
                 if (maybe(Token.BRACE_OPEN) != null) {
                     commaDelimited(Token.BRACE_OPEN, Token.BRACE_CLOSE) {
-                        suffix.add(pathSuffixItem(import))
+                        suffix.add(pathSuffixItem(pos))
                     }
                 } else {
                     unexpected(lex.at(0))
@@ -1093,18 +1136,18 @@ private class Parser(val src: Source, val diag: Diag) {
         }
     }
 
-    private fun maybePathSuffixItem(import: Boolean): S<Path.SuffixItem>? {
+    private fun maybePathSuffixItem(pos: PathPos): S<Path.SuffixItem>? {
         val span = spanner()
         val item = when (lex.at(0).value) {
             Token.IDENT -> {
                 val itemSpan = spanner()
                 val ident = ident()
-                val typeArgs = typeArgs()
-                val renamedAs = if (import) pathRenamedAs() else null
+                val typeArgs = typeArgs(pos == PathPos.EXPR)
+                val renamedAs = if (pos == PathPos.IMPORT) pathRenamedAs() else null
                 Path.SuffixItem.Item(S(itemSpan(), Path.Item(ident, typeArgs)), renamedAs)
             }
             Token.STAR -> {
-                if (import) {
+                if (pos == PathPos.IMPORT) {
                     lex.next()
                     Path.SuffixItem.Star
                 } else {
@@ -1112,7 +1155,7 @@ private class Parser(val src: Source, val diag: Diag) {
                 }
             }
             Token.KW_SELF_LOWER -> {
-                if (import) {
+                if (pos == PathPos.IMPORT) {
                     val ident = lex.next().map { Ident.SELF_LOWER }
                     val renamedAs = pathRenamedAs()
                     Path.SuffixItem.Item(ident.map { Path.Item(ident, emptyList()) }, renamedAs)
@@ -1125,16 +1168,59 @@ private class Parser(val src: Source, val diag: Diag) {
         return S(span(), item)
     }
 
-    private fun pathSuffixItem(import: Boolean): S<Path.SuffixItem> {
-        return maybePathSuffixItem(import) ?: unexpected(lex.at(0), Token.STAR, Token.KW_SELF_LOWER)
+    private fun pathSuffixItem(pos: PathPos): S<Path.SuffixItem> {
+        return maybePathSuffixItem(pos) ?: unexpected(lex.at(0), Token.STAR, Token.KW_SELF_LOWER)
     }
 
-    private fun typeArgs(): List<TypeExpr> {
-        val r = mutableListOf<TypeExpr>()
-        commaDelimited(Token.LT, Token.GT) {
-            r.add(typeExpr())
+    private fun typeArgs(inExprPos: Boolean): List<TypeExpr> {
+        when (lex.at(0).value) {
+            Token.LT, Token.LT2 -> {}
+            else -> return emptyList()
         }
-        return r
+        if (inExprPos) {
+            checkpoint()
+        }
+        try {
+            val r = mutableListOf<TypeExpr>()
+            lex.withNlMode(Lexer.NlMode.SKIP) {
+                commaDelimited(Token.LT, Token.GT) {
+                    r.add(typeExpr(inExprPos = false))
+                }
+            }
+            val ok = !inExprPos || checkpointed.state.newErrorCount == 0 &&
+                when (lex.at(0).value) {
+                    Token.BANG,
+                    Token.BRACE_CLOSE,
+                    Token.BRACE_OPEN,
+                    Token.BRACKET_CLOSE,
+                    Token.BRACKET_OPEN,
+                    Token.COMMA,
+                    Token.COLON2,
+                    Token.DOT,
+                    Token.EOF,
+                    Token.NL,
+                    Token.PAREN_CLOSE,
+                    Token.PAREN_OPEN,
+                    Token.QUEST,
+                    Token.SEMI,
+                    -> true
+                    else -> false
+                }
+            if (ok) {
+                if (inExprPos) {
+                    commit()
+                }
+                return r
+            }
+        } catch (e: ParseException) {
+            if (!inExprPos) {
+                throw e
+            }
+        }
+        if (inExprPos) {
+            rollback()
+        }
+        return emptyList()
     }
 
     private fun commaDelimited(start: Token, end: Token, f: () -> Unit): Boolean? {

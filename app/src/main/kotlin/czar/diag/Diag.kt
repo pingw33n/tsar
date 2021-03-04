@@ -1,5 +1,6 @@
 package czar.diag
 
+import czar.Checkpointed
 import czar.syntax.Source
 import czar.syntax.Span
 import java.io.StringWriter
@@ -12,18 +13,26 @@ data class Report(
     val message: String,
 )
 
-class Diag(val baseDir: Path? = null) {
-    private val _reports = mutableListOf<Report>()
-    private val absBaseDir: Path? by lazy { baseDir?.toAbsolutePath() }
+private class State(val reports: MutableList<Report> = mutableListOf()): Checkpointed.State<State> {
+    override fun copy(): State = State(reports.toMutableList())
+}
+
+class Diag(private val baseDir: Path? = null) {
+    private val checkpointed: Checkpointed<State> = Checkpointed(State())
 
     val reports: List<Report>
-        get() = _reports
+        get() = checkpointed.state.reports
+
+    fun checkpoint() = checkpointed.checkpoint()
+    fun rollback() = checkpointed.rollback()
+    fun commit() = checkpointed.commit()
 
     fun report(report: Report) {
-        _reports.add(report)
+        checkpointed.state.reports.add(report)
     }
 
     fun print(out: Appendable) {
+        val absBaseDir = baseDir?.toAbsolutePath()
         val reps = reports.sortedWith(compareBy({ it.source.location.toString() }, { it.span.start }, { it.span.end }) )
         reps.forEachIndexed { i, rep ->
             if (i > 0) {

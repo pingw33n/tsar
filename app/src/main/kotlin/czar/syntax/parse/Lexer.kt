@@ -1,5 +1,6 @@
 package czar.syntax.parse
 
+import czar.Checkpointed
 import czar.diag.Diag
 import czar.diag.Report
 import czar.syntax.S
@@ -18,21 +19,37 @@ private enum class IdentKind {
     RAW,
 }
 
-private sealed class Mode(val start: Int) {
-    var level: Int = 0
+private sealed class Mode(
+    val start: Int,
+    var level: Int,
+) {
+    class Normal(start: Int, level: Int = 0): Mode(start, level) {
+        override fun copy(): Normal = Normal(start, level)
+    }
 
-    class Normal(start: Int): Mode(start)
-    class StringLit(start: Int, val rawLen: Int?): Mode(start)
-    class StringLitSubst(start: Int): Mode(start)
+    class StringLit(start: Int, val rawLen: Int?, level: Int = 0): Mode(start, level) {
+        override fun copy(): StringLit = StringLit(start, rawLen, level)
+    }
+
+    class StringLitSubst(start: Int, level: Int = 0): Mode(start, level) {
+        override fun copy(): StringLitSubst = StringLitSubst(start, level)
+    }
+
+    abstract fun copy(): Mode
 }
 
-private class Buf(val nlMode: Lexer.NlMode) {
+private class Buf(
+    val nlMode: Lexer.NlMode,
+    val toks: MutableList<S<Token>> = mutableListOf(),
+    var lastRemoved: S<Token>? = null,
+) {
     companion object {
         const val CAP = 3
     }
 
-    val toks: MutableList<S<Token>> = mutableListOf()
-    var lastRemoved: S<Token>? = null
+    fun copy(): Buf {
+        return Buf(nlMode, toks.toMutableList(), lastRemoved)
+    }
 
     fun removeFirst(): S<Token> {
         val r = toks.removeAt(0)
@@ -47,18 +64,40 @@ internal class Lexer(val src: Source, val diag: Diag) {
         SKIP,
     }
 
-    private var pos: Int = 0
-    private val buf: Buf = Buf(NlMode.ALLOW)
-    private val nlessBuf: Buf = Buf(NlMode.SKIP)
+    private class State(
+        var pos: Int = 0,
+        val buf: Buf = Buf(NlMode.ALLOW),
+        val nlessBuf: Buf = Buf(NlMode.SKIP),
+        val modeStack: MutableList<Mode> = mutableListOf(Mode.Normal(0)),
+        val nlModeStack: MutableList<NlMode> = mutableListOf(NlMode.SKIP),
+    ): Checkpointed.State<State> {
+        override fun copy(): State {
+            return State(
+                pos,
+                buf.copy(),
+                nlessBuf.copy(),
+                modeStack.asSequence().map { it.copy() }.toMutableList(),
+                nlModeStack.toMutableList(),
+            )
+        }
+    }
 
-    private val modeStack: MutableList<Mode> = mutableListOf()
-    init {
-        modeStack.add(Mode.Normal(0))
-    }
-    private val nlModeStack: MutableList<NlMode> = mutableListOf()
-    init {
-        nlModeStack.add(NlMode.SKIP)
-    }
+    private val checkpointed: Checkpointed<State> = Checkpointed(State())
+    private var pos
+        get() = checkpointed.state.pos
+        set(v) { checkpointed.state.pos = v }
+    private val buf
+        get() = checkpointed.state.buf
+    private val nlessBuf
+        get() = checkpointed.state.nlessBuf
+    private val modeStack
+        get() = checkpointed.state.modeStack
+    private val nlModeStack
+        get() = checkpointed.state.nlModeStack
+
+    fun checkpoint() = checkpointed.checkpoint()
+    fun rollback() = checkpointed.rollback()
+    fun commit() = checkpointed.commit()
 
     fun pushNlMode(nlMode: NlMode) {
         nlModeStack.add(nlMode)

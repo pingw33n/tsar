@@ -1,0 +1,41 @@
+fn f() {
+    T<>
+    T<>.0
+    T<>[T<>]
+
+    T<T<>>
+    T<T<>>.0
+    T<T<>>[T<T<>>]
+
+    T<U, V>
+    T<
+        U,
+        V,
+    >.0
+    T<U, V>[T<U, V,>]
+
+    T<U, V, T<U, V>>
+    T<
+        U,
+        V,
+        T
+            <
+            U,
+            V
+            >
+    >.0
+    T<U, V, T<U, V>>[T<U, V, T<U, V>,>]
+
+    //TODO T<U, V>()
+    //TODO T<U, V>{}
+
+    (T<U, V>)
+    (T<U)
+
+    //TODO (T<U, V>0)
+    //TODO (T<U,)
+    //TODO (T<U>,)
+
+    //TODO path<>::to<T, Inner<>>::f<T<>, U<>> {} << path<>::to<T, Inner<>>::f<T<U<>>, V<>>();
+    //TODO path<>::to<T, Inner<>>::f<T<>, U<>> {} > path<>::to<T, Inner<>>::f<T<U<>>, V<>>();
+}
