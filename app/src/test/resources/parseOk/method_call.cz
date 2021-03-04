@@ -11,4 +11,8 @@ fn f() {
         package: Self,
         r#package: Self,
         continue: r#foobar)
+
+    Self::bar(*self, arg1, arg2)
+    self.x = 0
+    self.foo()
 }

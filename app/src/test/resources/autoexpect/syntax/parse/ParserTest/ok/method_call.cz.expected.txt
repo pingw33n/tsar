@@ -1,7 +1,7 @@
-@(0..336) {
+@(0..400) {
   source: "parseOk/method_call.cz"
   items: [
-    FnDef @(0..336) {
+    FnDef @(0..400) {
       name: @(3..4) `f`
       body: [
         Expr {
@@ -374,6 +374,125 @@
                       Item @(325..333) {
                         item: @(325..333) {
                           name: @(325..333) `foobar`
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+        Expr {
+          FnCall @(340..368) {
+            callee: Free {
+              Path @(340..349) {
+                @(340..349) {
+                  prefix: [
+                    @(340..344) {
+                      name: @(340..344) `self`
+                    }
+                  ]
+                  suffix: [
+                    Item @(346..349) {
+                      item: @(346..349) {
+                        name: @(346..349) `bar`
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+            args: [
+              {
+                value: UnaryOp @(350..355) {
+                  kind: @(350..351) `DEREF`
+                  arg: Path @(351..355) {
+                    @(351..355) {
+                      suffix: [
+                        Item @(351..355) {
+                          item: @(351..355) {
+                            name: @(351..355) `self`
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+              {
+                value: Path @(357..361) {
+                  @(357..361) {
+                    suffix: [
+                      Item @(357..361) {
+                        item: @(357..361) {
+                          name: @(357..361) `arg1`
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+              {
+                value: Path @(363..367) {
+                  @(363..367) {
+                    suffix: [
+                      Item @(363..367) {
+                        item: @(363..367) {
+                          name: @(363..367) `arg2`
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+        Expr {
+          BinaryOp @(380..383) {
+            kind: @(380..381) `ASSIGN`
+            left: Selector @(373..379) {
+              value: Path @(373..377) {
+                @(373..377) {
+                  suffix: [
+                    Item @(373..377) {
+                      item: @(373..377) {
+                        name: @(373..377) `self`
+                      }
+                    }
+                  ]
+                }
+              }
+              name: @(378..379) `x`
+            }
+            right: Int @(382..383) {
+              `0`
+            }
+          }
+        }
+        Expr {
+          FnCall @(388..398) {
+            callee: Method {
+              @(393..398) {
+                suffix: [
+                  Item @(393..398) {
+                    item: @(393..398) {
+                      name: @(393..396) `foo`
+                    }
+                  }
+                ]
+              }
+            }
+            args: [
+              {
+                label: @(388..392) `self`
+                value: Path @(388..392) {
+                  @(388..392) {
+                    suffix: [
+                      Item @(388..392) {
+                        item: @(388..392) {
+                          name: @(388..392) `self`
                         }
                       }
                     ]
