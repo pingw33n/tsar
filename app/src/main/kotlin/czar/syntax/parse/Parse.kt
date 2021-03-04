@@ -489,8 +489,7 @@ private class Parser(val src: Source, val diag: Diag) {
 
     fun parse(): Hir {
         val items = moduleItems()
-        val module = Module(src, name = null, items)
-        spans.setOnce(module.id, Span(0, src.text.length))
+        val module = spanned(Span(0, src.text.length), Module(src, name = null, items))
         // TODO check all Nodes have spans
         return Hir(module, spans)
     }
@@ -581,8 +580,7 @@ private class Parser(val src: Source, val diag: Diag) {
                 val type = typeExpr()
                 FnParam(label, paramName, type)
             }
-            spans.setOnce(node.id, paramSpan())
-            params.add(node)
+            params.add(spanned(paramSpan(), node))
         }
         val result = if (maybe(Token.DASH_GT) != null) {
             typeExpr()
@@ -599,9 +597,7 @@ private class Parser(val src: Source, val diag: Diag) {
             null
         }
 
-        val node = FnDef(pub, name, typeParams, params, result, unsafe, body, variadic = false)
-        spans.setOnce(node.id, span())
-        return node
+        return spanned(span(), FnDef(pub, name, typeParams, params, result, unsafe, body, variadic = false))
     }
 
     private fun fnParamLabel(): S<FnParam.Label>? {
@@ -1081,9 +1077,7 @@ private class Parser(val src: Source, val diag: Diag) {
             break
         }
 
-        val node = Path(origin, prefix, suffix)
-        spans.setOnce(node.id, span())
-        return node
+        return spanned(span(), Path(origin, prefix, suffix))
     }
 
     private fun spanner(): () -> Span {
