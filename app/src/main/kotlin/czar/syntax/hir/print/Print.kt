@@ -238,6 +238,7 @@ private class PrinterImpl(val hir: Hir, val relativizePath: java.nio.file.Path?,
             if (origin != null) {
                 obj("origin", origin.value::class, origin.span) {
                     when (origin.value) {
+                        Path.Origin.Module -> {}
                         is Path.Origin.Package -> {
                             val (name) = origin.value
                             if (name != null) {

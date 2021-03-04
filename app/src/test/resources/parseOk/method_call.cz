@@ -3,4 +3,12 @@ fn f() {
     global::var<T, U<>>.method(
         for: receiver.foo<T, path<>::to<T, Inner<>>::Struct<T<U<>>, V<>>>())
 
+    path::to::Foo::bar(self: 42)
+    path::to::Foo::bar<T>(
+        self: self,
+        break: stuff,
+        r#break: stuff,
+        package: Self,
+        r#package: Self,
+        continue: r#foobar)
 }

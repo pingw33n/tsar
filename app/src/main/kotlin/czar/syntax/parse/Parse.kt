@@ -484,7 +484,7 @@ private sealed class OpKind {
     }
 }
 
-private enum class PathPos {
+private enum class PathPlace {
     EXPR,
     IMPORT,
     TYPE,
@@ -709,7 +709,7 @@ private class Parser(val src: Source, val diag: Diag) {
 
     private fun typeExpr(): TypeExpr {
         val span = spanner()
-        val path = maybePath(PathPos.TYPE)
+        val path = maybePath(PathPlace.TYPE)
         val node = if (path == null) {
             when {
                 maybe(Token.AMP) != null -> TypeExpr.Ref(typeExpr())
@@ -841,7 +841,7 @@ private class Parser(val src: Source, val diag: Diag) {
                 }
             }
             else -> {
-                val path = maybePath(PathPos.EXPR) ?: return null
+                val path = maybePath(PathPlace.EXPR) ?: return null
                 spanned(span(), Expr.Path(path))
             }
         }
@@ -1127,10 +1127,14 @@ private class Parser(val src: Source, val diag: Diag) {
         return spanned(span(), Expr.UnaryOp(S(kindSpan, kind), argu))
     }
 
-    private fun maybePath(pos: PathPos): Path? {
+    private fun maybePath(place: PathPlace): Path? {
         val span = spanner()
         val origin: S<Path.Origin>? = when (lex.at(0).value) {
-            Token.IDENT -> null
+            Token.IDENT,
+            Token.KW_SELF_LOWER,
+            Token.KW_SELF_UPPER,
+            -> null
+
             Token.COLON2 -> {
                 lex.next()
                 Path.Origin.Package(null)
@@ -1162,16 +1166,21 @@ private class Parser(val src: Source, val diag: Diag) {
                 }
                 Path.Origin.Super(count)
             }
+            Token.KW_MODULE -> {
+                lex.next()
+                expect(Token.COLON2)
+                Path.Origin.Module
+            }
             else -> return null
         }?.let { S(span(), it) }
         val prefix = mutableListOf<S<Path.Item>>()
         val suffix = mutableListOf<S<Path.SuffixItem>>()
         while (true) {
-            val suffixItem = maybePathSuffixItem(pos)
+            val suffixItem = maybePathSuffixItem(place, inBraces = false)
             if (suffixItem == null) {
                 if (maybe(Token.BRACE_OPEN) != null) {
                     commaDelimited(Token.BRACE_OPEN, Token.BRACE_CLOSE) {
-                        suffix.add(pathSuffixItem(pos))
+                        suffix.add(pathSuffixItem(place, inBraces = true))
                     }
                 } else {
                     unexpected(lex.at(0))
@@ -1179,16 +1188,11 @@ private class Parser(val src: Source, val diag: Diag) {
             } else {
                 if (suffixItem.value is Path.SuffixItem.Item && suffixItem.value.renamedAs == null) {
                     if (maybe(Token.COLON2) != null) {
-                        if (suffixItem.value.item.value.name.value == Ident.SELF_LOWER) {
-                            error(suffixItem.value.item.value.name.span,
-                                "`self` imports are only allowed within a { } list")
-                        }
                         prefix.add(suffixItem.value.item)
                         continue
-                    } else {
-                        suffix.add(suffixItem)
                     }
                 }
+                suffix.add(suffixItem)
             }
             break
         }
@@ -1209,18 +1213,18 @@ private class Parser(val src: Source, val diag: Diag) {
         }
     }
 
-    private fun maybePathSuffixItem(pos: PathPos): S<Path.SuffixItem>? {
+    private fun maybePathSuffixItem(place: PathPlace, inBraces: Boolean): S<Path.SuffixItem>? {
         val span = spanner()
         val item = when (lex.at(0).value) {
             Token.IDENT -> {
                 val itemSpan = spanner()
                 val ident = ident()
-                val typeArgs = typeArgs(pos == PathPos.EXPR)?.value ?: emptyList()
-                val renamedAs = if (pos == PathPos.IMPORT) pathRenamedAs() else null
+                val typeArgs = typeArgs(place == PathPlace.EXPR)?.value ?: emptyList()
+                val renamedAs = if (place == PathPlace.IMPORT) pathRenamedAs() else null
                 Path.SuffixItem.Item(S(itemSpan(), Path.Item(ident, typeArgs)), renamedAs)
             }
             Token.STAR -> {
-                if (pos == PathPos.IMPORT) {
+                if (place == PathPlace.IMPORT) {
                     lex.next()
                     Path.SuffixItem.Star
                 } else {
@@ -1228,21 +1232,36 @@ private class Parser(val src: Source, val diag: Diag) {
                 }
             }
             Token.KW_SELF_LOWER -> {
-                if (pos == PathPos.IMPORT) {
-                    val ident = lex.next().map { Ident.SELF_LOWER }
-                    val renamedAs = pathRenamedAs()
-                    Path.SuffixItem.Item(ident.map { Path.Item(ident, emptyList()) }, renamedAs)
-                } else {
-                    return null
+                when (place) {
+                    PathPlace.EXPR, PathPlace.IMPORT -> {
+                        val ident = lex.next().map { Ident.SELF_LOWER }
+                        val renamedAs = if (place == PathPlace.IMPORT) {
+                            if (!inBraces) {
+                                error(ident.span,
+                                    "`self` imports are only allowed within a { } list")
+                            }
+                            pathRenamedAs()
+                        } else {
+                            null
+                        }
+                        Path.SuffixItem.Item(ident.map { Path.Item(ident, emptyList()) }, renamedAs)
+                    }
+                    else -> {
+                        return null
+                    }
                 }
+            }
+            Token.KW_SELF_UPPER -> {
+                val ident = lex.next().map { Ident.SELF_LOWER }
+                Path.SuffixItem.Item(ident.map { Path.Item(ident, emptyList()) }, renamedAs = null)
             }
             else -> return null
         }
         return S(span(), item)
     }
 
-    private fun pathSuffixItem(pos: PathPos): S<Path.SuffixItem> {
-        return maybePathSuffixItem(pos) ?: unexpected(lex.at(0), Token.STAR, Token.KW_SELF_LOWER)
+    private fun pathSuffixItem(place: PathPlace, inBraces: Boolean): S<Path.SuffixItem> {
+        return maybePathSuffixItem(place, inBraces) ?: unexpected(lex.at(0), Token.STAR, Token.KW_SELF_LOWER)
     }
 
     private fun typeArgs(inExprPos: Boolean): S<List<TypeExpr>>? {
@@ -1420,17 +1439,4 @@ fun parse(src: Source, diag: Diag): Hir? {
         check(diag.reports.size > errsBefore) { e.stackTraceToString() }
         null
     }
-}
-
-fun main() {
-    val diag = Diag()
-    val hir = parse(
-        Source("""
-        fn foo<T, U, V>(break v: package(std)::T<F<X<Z>>>) {}
-    """, java.nio.file.Path.of("test")), diag
-    )
-    if (diag.reports.isNotEmpty()) {
-        println(diag.toString())
-    }
-    hir!!
 }

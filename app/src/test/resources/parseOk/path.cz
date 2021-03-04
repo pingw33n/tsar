@@ -1,0 +1,17 @@
+fn f() {
+    a
+    a::b<T>::c<U, V>
+
+    self
+    self::foo<T>::bar<T, U>
+    Self
+    Self::foo<T>::bar<T, U>
+
+    package::foo
+    package::foo<T>::Bar<U>
+    package(pkg)::foo
+    package(pkg)::foo<T>::Bar<U>
+
+    module::foo
+    module::foo<T>::Bar<U>
+}

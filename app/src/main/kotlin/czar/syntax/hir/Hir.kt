@@ -141,6 +141,9 @@ data class Path(
 
         // super::super::foo
         data class Super(val count: Int): Origin()
+
+        // module::foo
+        object Module: Origin()
     }
 
     data class Item(
