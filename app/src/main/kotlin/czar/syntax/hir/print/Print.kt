@@ -183,9 +183,9 @@ private class PrinterImpl(val hir: Hir, val relativizePath: java.nio.file.Path?,
                     }
                     list("args", items = args) {
                         obj {
-                            val (name, value) = it
-                            ident("name", name)
-                            expr("value", value)
+                            val (label, v) = it
+                            ident("label", label)
+                            expr("value", v)
                         }
                     }
                 }

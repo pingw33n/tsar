@@ -371,7 +371,7 @@ sealed class Expr: Node() {
         }
 
         data class Arg(
-            val name: S<Ident>?,
+            val label: S<Ident>?,
             val value: Expr,
         )
     }
