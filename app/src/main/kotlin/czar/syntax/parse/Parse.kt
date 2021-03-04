@@ -620,13 +620,13 @@ private class Parser(val src: Source, val diag: Diag) {
                 val label = fnParamLabel()
                 val paramName = ident()
                 expect(Token.COLON)
-                val type = typeExpr(inExprPos = false)
+                val type = typeExpr()
                 FnParam(label, paramName, type)
             }
             params.add(spanned(paramSpan(), node))
         }
         val result = if (maybe(Token.DASH_GT) != null) {
-            typeExpr(inExprPos = false)
+            typeExpr()
         } else {
             null
         }
@@ -692,14 +692,14 @@ private class Parser(val src: Source, val diag: Diag) {
         return spanned(span(), Block(items))
     }
 
-    private fun typeExpr(inExprPos: Boolean): TypeExpr {
+    private fun typeExpr(): TypeExpr {
         val span = spanner()
-        val path = maybePath(if (inExprPos) PathPos.EXPR else PathPos.TYPE)
+        val path = maybePath(PathPos.TYPE)
         val node = if (path == null) {
             when {
-                maybe(Token.AMP) != null -> TypeExpr.Ref(typeExpr(inExprPos = false))
+                maybe(Token.AMP) != null -> TypeExpr.Ref(typeExpr())
                 maybe(Token.BRACKET_OPEN) != null -> {
-                    val item = typeExpr(inExprPos = false)
+                    val item = typeExpr()
                     val len = if (maybe(Token.SEMI) != null) {
                         maybeExpr()
                     } else {
@@ -719,14 +719,14 @@ private class Parser(val src: Source, val diag: Diag) {
                         } else {
                             null
                         }
-                        val type = typeExpr(inExprPos = false)
+                        val type = typeExpr()
                         val name_ = name ?: S(spans[type.id]!!, Ident.index(fields.size))
                         fields.add(StructBody.Field(pub = null, name_, type))
                     }!!
-                    if (fields.size == 1 && !record && !hadTrailingComma) {
-                        TODO()
-                    } else {
+                    if (fields.size != 1 || record || hadTrailingComma) {
                         TypeExpr.UnnamedStruct(StructBody(fields))
+                    } else {
+                        TODO()
                     }
                 }
                 else -> unexpected(lex.at(0), "`&`, `[`, `(` or path")
@@ -904,7 +904,7 @@ private class Parser(val src: Source, val diag: Diag) {
             left = when (opKind) {
                 OpKind.As -> {
                     lex.next()
-                    val type = typeExpr(inExprPos = false)
+                    val type = typeExpr()
                     spanned(span(), Expr.As(left, type))
                 }
                 is OpKind.Binary -> binaryOp(span, opKind.value, left, nextCtx)
@@ -1184,7 +1184,7 @@ private class Parser(val src: Source, val diag: Diag) {
             val r = mutableListOf<TypeExpr>()
             lex.withNlMode(Lexer.NlMode.SKIP) {
                 commaDelimited(Token.LT, Token.GT) {
-                    r.add(typeExpr(inExprPos = false))
+                    r.add(typeExpr())
                 }
             }
             val ok = !inExprPos || checkpointed.state.newErrorCount == 0 &&
