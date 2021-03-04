@@ -1,0 +1,9 @@
+error: unexpected type arguments
+  --> selector_unexpected_type_args.cz:2:8
+2 |     a.b<>
+           ~~
+
+error: unexpected type arguments
+  --> selector_unexpected_type_args.cz:3:8
+3 |     a.b<C, D>
+           ~~~~~~

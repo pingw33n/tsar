@@ -1,0 +1,226 @@
+@(0..134) {
+  source: "parseOk/method_call.cz"
+  items: [
+    FnDef @(0..134) {
+      name: @(3..4) `f`
+      body: [
+        Expr {
+          FnCall @(13..22) {
+            callee: Method {
+              @(17..22) {
+                suffix: [
+                  Item @(17..22) {
+                    item: @(17..22) {
+                      name: @(17..20) `bar`
+                    }
+                  }
+                ]
+              }
+            }
+            args: [
+              {
+                label: @(13..16) `self`
+                value: Path @(13..16) {
+                  @(13..16) {
+                    suffix: [
+                      Item @(13..16) {
+                        item: @(13..16) {
+                          name: @(13..16) `foo`
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+        Expr {
+          FnCall @(27..131) {
+            callee: Method {
+              @(47..131) {
+                suffix: [
+                  Item @(47..131) {
+                    item: @(47..131) {
+                      name: @(47..53) `method`
+                    }
+                  }
+                ]
+              }
+            }
+            args: [
+              {
+                label: @(27..46) `self`
+                value: Path @(27..46) {
+                  @(27..46) {
+                    prefix: [
+                      @(27..33) {
+                        name: @(27..33) `global`
+                      }
+                    ]
+                    suffix: [
+                      Item @(35..46) {
+                        item: @(35..46) {
+                          name: @(35..38) `var`
+                          typeArgs: [
+                            Path @(39..40) {
+                              @(39..40) {
+                                suffix: [
+                                  Item @(39..40) {
+                                    item: @(39..40) {
+                                      name: @(39..40) `T`
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                            Path @(42..46) {
+                              @(42..46) {
+                                suffix: [
+                                  Item @(42..46) {
+                                    item: @(42..46) {
+                                      name: @(42..43) `U`
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+              {
+                label: @(63..66) `for`
+                value: FnCall @(68..130) {
+                  callee: Method {
+                    @(77..130) {
+                      suffix: [
+                        Item @(77..130) {
+                          item: @(77..130) {
+                            name: @(77..80) `foo`
+                            typeArgs: [
+                              Path @(81..82) {
+                                @(81..82) {
+                                  suffix: [
+                                    Item @(81..82) {
+                                      item: @(81..82) {
+                                        name: @(81..82) `T`
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                              Path @(84..127) {
+                                @(84..127) {
+                                  prefix: [
+                                    @(84..90) {
+                                      name: @(84..88) `path`
+                                    }
+                                    @(92..106) {
+                                      name: @(92..94) `to`
+                                      typeArgs: [
+                                        Path @(95..96) {
+                                          @(95..96) {
+                                            suffix: [
+                                              Item @(95..96) {
+                                                item: @(95..96) {
+                                                  name: @(95..96) `T`
+                                                }
+                                              }
+                                            ]
+                                          }
+                                        }
+                                        Path @(98..106) {
+                                          @(98..106) {
+                                            suffix: [
+                                              Item @(98..106) {
+                                                item: @(98..106) {
+                                                  name: @(98..103) `Inner`
+                                                }
+                                              }
+                                            ]
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                  suffix: [
+                                    Item @(108..127) {
+                                      item: @(108..127) {
+                                        name: @(108..114) `Struct`
+                                        typeArgs: [
+                                          Path @(115..121) {
+                                            @(115..121) {
+                                              suffix: [
+                                                Item @(115..121) {
+                                                  item: @(115..121) {
+                                                    name: @(115..116) `T`
+                                                    typeArgs: [
+                                                      Path @(117..121) {
+                                                        @(117..121) {
+                                                          suffix: [
+                                                            Item @(117..121) {
+                                                              item: @(117..121) {
+                                                                name: @(117..118) `U`
+                                                              }
+                                                            }
+                                                          ]
+                                                        }
+                                                      }
+                                                    ]
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          }
+                                          Path @(123..127) {
+                                            @(123..127) {
+                                              suffix: [
+                                                Item @(123..127) {
+                                                  item: @(123..127) {
+                                                    name: @(123..124) `V`
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                  args: [
+                    {
+                      label: @(68..76) `self`
+                      value: Path @(68..76) {
+                        @(68..76) {
+                          suffix: [
+                            Item @(68..76) {
+                              item: @(68..76) {
+                                name: @(68..76) `receiver`
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

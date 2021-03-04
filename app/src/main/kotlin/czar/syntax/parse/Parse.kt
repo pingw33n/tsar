@@ -929,26 +929,10 @@ private class Parser(val src: Source, val diag: Diag) {
                 }
                 is OpKind.Binary -> binaryOp(span, opKind.value, left, nextCtx)
                 OpKind.Range -> TODO()
-                OpKind.Selector -> {
-                    lex.next()
-                    val name = if (lex.at(0).value == Token.INT_LIT) {
-                        val sp = lex.next().span
-                        S(sp, lex.ident(sp))
-                    } else {
-                        ident()
-                    }
-                    spanned(span(), Expr.Selector(left, name))
-                }
+                OpKind.Selector -> selectorOrMethodCall(span, left)
                 is OpKind.Unary -> unaryOp(span, opKind.value, left, nextCtx)
                 OpKind.FnCall -> {
-                    val args = mutableListOf<Expr.FnCall.Arg>()
-                    lex.withNlMode(Lexer.NlMode.SKIP) {
-                        commaDelimited(Token.PAREN_OPEN, Token.PAREN_CLOSE) {
-                            val label = fnArgLabel()
-                            val value = expr()
-                            args.add(Expr.FnCall.Arg(label, value))
-                        }
-                    }
+                    val args = fnCallArgs()
                     spanned(span(), Expr.FnCall(Expr.FnCall.Callee.Free(left), args))
                 }
                 OpKind.Index -> {
@@ -963,6 +947,49 @@ private class Parser(val src: Source, val diag: Diag) {
         }
 
         return left
+    }
+
+    private fun selectorOrMethodCall(
+        span: () -> Span,
+        value: Expr,
+    ): Expr {
+        lex.next()
+        val name = if (lex.at(0).value == Token.INT_LIT) {
+            val sp = lex.next().span
+            S(sp, lex.ident(sp))
+        } else {
+            val methodSpan = spanner()
+            val name = ident()
+            val typeArgs = typeArgs(inExprPos = true)
+            if (lex.at(0).value == Token.PAREN_OPEN) {
+                val args = fnCallArgs()
+                args.add(0, Expr.FnCall.Arg(S(spans[value.id]!!, Ident.SELF_LOWER), value))
+
+                val sp = methodSpan()
+                val methodName = spanned(sp, Path(null, emptyList(),
+                    listOf(S(sp, Path.SuffixItem.Item(S(sp, Path.Item(name, typeArgs?.value ?: emptyList())),
+                        renamedAs = null)))))
+
+                return spanned(span(), Expr.FnCall(Expr.FnCall.Callee.Method(methodName), args))
+            }
+            if (typeArgs != null) {
+                error(typeArgs.span, "unexpected type arguments")
+            }
+            name
+        }
+        return spanned(span(), Expr.Selector(value, name))
+    }
+
+    private fun fnCallArgs(): MutableList<Expr.FnCall.Arg> {
+        val args = mutableListOf<Expr.FnCall.Arg>()
+        lex.withNlMode(Lexer.NlMode.SKIP) {
+            commaDelimited(Token.PAREN_OPEN, Token.PAREN_CLOSE) {
+                val label = fnArgLabel()
+                val value = expr()
+                args.add(Expr.FnCall.Arg(label, value))
+            }
+        }
+        return args
     }
 
     private fun unnamedStructLiteralField(): S<Ident>? {
@@ -1188,7 +1215,7 @@ private class Parser(val src: Source, val diag: Diag) {
             Token.IDENT -> {
                 val itemSpan = spanner()
                 val ident = ident()
-                val typeArgs = typeArgs(pos == PathPos.EXPR)
+                val typeArgs = typeArgs(pos == PathPos.EXPR)?.value ?: emptyList()
                 val renamedAs = if (pos == PathPos.IMPORT) pathRenamedAs() else null
                 Path.SuffixItem.Item(S(itemSpan(), Path.Item(ident, typeArgs)), renamedAs)
             }
@@ -1218,11 +1245,11 @@ private class Parser(val src: Source, val diag: Diag) {
         return maybePathSuffixItem(pos) ?: unexpected(lex.at(0), Token.STAR, Token.KW_SELF_LOWER)
     }
 
-    private fun typeArgs(inExprPos: Boolean): List<TypeExpr> {
-        when (lex.at(0).value) {
-            Token.LT, Token.LT2 -> {}
-            else -> return emptyList()
+    private fun typeArgs(inExprPos: Boolean): S<List<TypeExpr>>? {
+        if (lex.at(0).value != Token.LT) {
+            return null
         }
+        val span = spanner()
         if (inExprPos) {
             checkpoint()
         }
@@ -1256,7 +1283,7 @@ private class Parser(val src: Source, val diag: Diag) {
                 if (inExprPos) {
                     commit()
                 }
-                return r
+                return S(span(), r)
             }
         } catch (e: ParseException) {
             if (!inExprPos) {
@@ -1266,7 +1293,7 @@ private class Parser(val src: Source, val diag: Diag) {
         if (inExprPos) {
             rollback()
         }
-        return emptyList()
+        return null
     }
 
     private fun commaDelimited(start: Token, end: Token, f: () -> Unit): Boolean? {

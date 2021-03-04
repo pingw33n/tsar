@@ -1,0 +1,6 @@
+fn f() {
+    foo.bar()
+    global::var<T, U<>>.method(
+        for: receiver.foo<T, path<>::to<T, Inner<>>::Struct<T<U<>>, V<>>>())
+
+}
