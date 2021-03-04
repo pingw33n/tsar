@@ -682,8 +682,12 @@ private class Parser(val src: Source, val diag: Diag) {
         val items = mutableListOf<Block.Item>()
         lex.withNlMode(Lexer.NlMode.ALLOW) {
             while (true) {
-                if (maybe(Token.NL) != null) {
-                    continue
+                when (lex.at(0).value) {
+                    Token.NL, Token.SEMI -> {
+                        lex.next()
+                        continue
+                    }
+                    else -> {}
                 }
                 if (maybe(Token.BRACE_CLOSE) != null) {
                     break

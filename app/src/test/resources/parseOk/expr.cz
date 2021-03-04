@@ -34,3 +34,8 @@ fn f() {
 fn f() {
     self
 }
+
+fn f() {
+    1;
+    foo; f()
+}
