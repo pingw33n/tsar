@@ -1,0 +1,174 @@
+@(0..179) {
+  source: "parseOk/unnamed_struct_literal.cz"
+  items: [
+    FnDef @(0..179) {
+      name: @(3..4) `f`
+      body: [
+        Expr {
+          FnCall @(13..15) {
+          }
+        }
+        Expr {
+          FnCall @(20..24) {
+            args: [
+              {
+                value: Int @(21..22) {
+                  `1`
+                }
+              }
+            ]
+          }
+        }
+        Expr {
+          FnCall @(29..37) {
+            args: [
+              {
+                value: Int @(30..31) {
+                  `1`
+                }
+              }
+              {
+                value: Int @(32..33) {
+                  `2`
+                }
+              }
+              {
+                value: UnaryOp @(34..36) {
+                  kind: @(34..35) `ADDR_OF`
+                  arg: Int @(35..36) {
+                    `3`
+                  }
+                }
+              }
+            ]
+          }
+        }
+        Expr {
+          FnCall @(42..53) {
+            args: [
+              {
+                value: FnCall @(43..45) {
+                }
+              }
+              {
+                value: FnCall @(47..52) {
+                  args: [
+                    {
+                      value: Int @(48..50) {
+                        `42`
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+        Expr {
+          FnCall @(58..66) {
+            args: [
+              {
+                name: @(59..62) `foo`
+                value: Int @(64..65) {
+                  `1`
+                }
+              }
+            ]
+          }
+        }
+        Expr {
+          FnCall @(71..90) {
+            args: [
+              {
+                name: @(72..75) `foo`
+                value: Int @(77..78) {
+                  `1`
+                }
+              }
+              {
+                name: @(80..83) `bar`
+                value: UnaryOp @(85..88) {
+                  kind: @(85..86) `ADDR_OF`
+                  arg: FnCall @(86..88) {
+                  }
+                }
+              }
+            ]
+          }
+        }
+        Expr {
+          FnCall @(95..110) {
+            args: [
+              {
+                value: Path @(96..99) {
+                  @(96..99) {
+                    suffix: [
+                      Item @(96..99) {
+                        item: @(96..99) {
+                          name: @(96..99) `foo`
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+              {
+                name: @(101..104) `bar`
+                value: Path @(106..109) {
+                  @(106..109) {
+                    suffix: [
+                      Item @(106..109) {
+                        item: @(106..109) {
+                          name: @(106..109) `baz`
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+        Expr {
+          FnCall @(115..127) {
+            args: [
+              {
+                name: @(116..117) `0`
+                value: Int @(119..120) {
+                  `0`
+                }
+              }
+              {
+                name: @(122..123) `1`
+                value: Int @(125..126) {
+                  `1`
+                }
+              }
+            ]
+          }
+        }
+        Expr {
+          FnCall @(133..177) {
+            args: [
+              {
+                name: @(143..146) `foo`
+                value: Int @(148..149) {
+                  `1`
+                }
+              }
+              {
+                name: @(159..162) `bar`
+                value: UnaryOp @(164..170) {
+                  kind: @(164..165) `ADDR_OF`
+                  arg: Float @(165..170) {
+                    `2.345`
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -603,7 +603,7 @@ private class Parser(val src: Source, val diag: Diag) {
                     Ident.SELF_LOWER
                 }
 
-                val label = paramName.map { FnParam.Label.SELF }
+                val label = paramName.map { Ident.SELF_LOWER }
 
                 val selfSpan = paramName.span
                 val selfPath = spanned(selfSpan, Path.of(S(selfSpan, Ident.SELF_UPPER)))
@@ -643,17 +643,17 @@ private class Parser(val src: Source, val diag: Diag) {
         return spanned(span(), FnDef(pub, name, typeParams, params, result, unsafe, body, variadic = false))
     }
 
-    private fun fnParamLabel(): S<FnParam.Label>? {
+    private fun fnParamLabel(): S<Ident>? {
         if (lex.at(1).value != Token.IDENT) {
             return null
         }
         val tok = lex.at(0)
         return when {
             tok.value == Token.IDENT -> {
-                ident().map { FnParam.Label(it.value) }
+                ident()
             }
             tok.value.isKeyword() -> {
-                lex.next().map { FnParam.Label(it.toString()) }
+                lex.next().map { Ident(it.toString()) }
             }
             else -> {
                 null
@@ -793,32 +793,37 @@ private class Parser(val src: Source, val diag: Diag) {
         } ?: when (lex.at(0).value) {
             Token.FLOAT_LIT -> floatLit()!!
             Token.INT_LIT -> floatLit() ?: intLit()
-            Token.PAREN_OPEN -> {
+            Token.PAREN_OPEN -> lex.withNlMode(Lexer.NlMode.SKIP) {
                 lex.next()
-                val explicitTuple = if (isPrefix(Token.INT_LIT, Token.COLON)) {
-                    val sp = spanner()
-                    val zeroSpan = lex.next().span
-                    val zero = lex.ident(zeroSpan)
-                    if (zero.value != "0") {
-                        error(zeroSpan, "expected `0` to mark explicit tuple literal")
-                    }
-                    lex.next()
-                    S(sp(), Unit)
-                } else {
-                    null
-                }
-                val expr = lex.withNlMode(Lexer.NlMode.SKIP) {
-                    if (explicitTuple == null) {
+                val firstField = unnamedStructLiteralField()
+                val firstValue = if (firstField == null) {
                         maybeExpr()
                     } else {
                         expr()
                     }
+                if (firstValue == null) {
+                    expect(Token.PAREN_CLOSE)
+                    spanned(span(), Expr.FnCall(callee = null, emptyList()))
+                } else if (firstField != null || lex.at(0).value == Token.COMMA) {
+                    val args = mutableListOf(Expr.FnCall.Arg(firstField, firstValue))
+                    while (true) {
+                        val comma = maybe(Token.COMMA)
+                        if (maybe(Token.PAREN_CLOSE) != null) {
+                            break
+                        }
+                        if (comma == null) {
+                            unexpected(lex.at(0), Token.COMMA, Token.PAREN_CLOSE)
+                        }
+
+                        val field = unnamedStructLiteralField()
+                        val value = expr()
+                        args.add(Expr.FnCall.Arg(field, value))
+                    }
+                    spanned(span(), Expr.FnCall(callee = null, args))
+                } else {
+                    expect(Token.PAREN_CLOSE)
+                    firstValue
                 }
-                if (expr == null || maybe(Token.COMMA) != null) {
-                    TODO("tuple/record")
-                }
-                expect(Token.PAREN_CLOSE)
-                expr
             }
             else -> {
                 val path = maybePath(PathPos.EXPR) ?: return null
@@ -933,6 +938,22 @@ private class Parser(val src: Source, val diag: Diag) {
         }
 
         return left
+    }
+
+    private fun unnamedStructLiteralField(): S<Ident>? {
+        if (lex.at(1).value != Token.COLON) {
+            return null
+        }
+        val r = when (lex.at(0).value) {
+            Token.INT_LIT -> {
+                val sp = lex.next().span
+                S(sp, lex.ident(sp))
+            }
+            Token.IDENT -> ident()
+            else -> return null
+        }
+        lex.next()
+        return r
     }
 
     private fun checkOpChain(opChain: MutableList<S<OpKind>>) {

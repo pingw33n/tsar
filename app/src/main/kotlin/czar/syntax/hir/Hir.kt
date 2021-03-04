@@ -83,25 +83,10 @@ data class FnDef(
 ): ModuleItem()
 
 data class FnParam(
-    val label: S<Label>?,
+    val label: S<Ident>?,
     val name: S<Ident>,
     val type: TypeExpr,
-): Node() {
-    inline class Label(val value: CharSequence) {
-        init {
-            require(value.isNotEmpty())
-        }
-
-        companion object {
-            val SELF: Label = Label("self")
-            val UNDERSCORE: Label = Label("_")
-        }
-
-        override fun toString(): String {
-            return value.toString()
-        }
-    }
-}
+): Node()
 
 data class LetDef(
     val pattern: S<Pattern>,
@@ -376,13 +361,13 @@ sealed class Expr: Node() {
         val type: TypeExpr,
     ): Expr()
 
-    class FnCall(
-        val callee: Callee,
+    data class FnCall(
+        val callee: Callee?,
         val args: List<Arg>
     ): Expr() {
         sealed class Callee {
-            data class Free(val fn: Expr)
-            data class Method(val name: Path)
+            data class Free(val value: Expr): Callee()
+            data class Method(val name: czar.syntax.hir.Path): Callee()
         }
 
         data class Arg(

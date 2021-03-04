@@ -171,7 +171,24 @@ private class PrinterImpl(val hir: Hir, val relativizePath: java.nio.file.Path?,
                 is Expr.Char -> entry(value = Value.Literal("'\\u{${value.value.toString(16)}}'"))
                 is Expr.ControlFlow -> TODO()
                 is Expr.Float -> entry(value = Value.Literal(value.value.toString()))
-                is Expr.FnCall -> TODO()
+                is Expr.FnCall -> {
+                    val (callee, args) = value
+                    if (callee != null) {
+                        obj("callee", callee::class) {
+                            when (callee) {
+                                is Expr.FnCall.Callee.Free -> expr(value = callee.value)
+                                is Expr.FnCall.Callee.Method -> path(value = callee.name)
+                            }
+                        }
+                    }
+                    list("args", items = args) {
+                        obj {
+                            val (name, value) = it
+                            ident("name", name)
+                            expr("value", value)
+                        }
+                    }
+                }
                 is Expr.For -> TODO()
                 is Expr.If -> TODO()
                 is Expr.Index -> {
@@ -293,8 +310,10 @@ private class PrinterImpl(val hir: Hir, val relativizePath: java.nio.file.Path?,
         end()
     }
 
-    private fun ident(field: String? = null, value: S<Ident>) {
-        entry(field, span = value.span, value = Value.Literal(value.value.value))
+    private fun ident(field: String? = null, value: S<Ident>?) {
+        if (value != null) {
+            entry(field, span = value.span, value = Value.Literal(value.value.value))
+        }
     }
 
     private fun span(node: Node) = hir.spans[node.id]!!
