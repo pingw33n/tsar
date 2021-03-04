@@ -647,6 +647,21 @@ private class Parser(val src: Source, val diag: Diag) {
         if (lex.at(1).value != Token.IDENT) {
             return null
         }
+        return identOrKeyword()
+    }
+
+    private fun fnArgLabel(): S<Ident>? {
+        if (lex.at(1).value != Token.COLON) {
+            return null
+        }
+        val r = identOrKeyword()
+        if (r != null) {
+            lex.next()
+        }
+        return r
+    }
+
+    private fun identOrKeyword(): S<Ident>? {
         val tok = lex.at(0)
         return when {
             tok.value == Token.IDENT -> {
@@ -887,8 +902,8 @@ private class Parser(val src: Source, val diag: Diag) {
 
                 Token.DOT -> OpKind.Selector
                 Token.DOT2, Token.DOT2_EQ -> OpKind.Range
-
                 Token.BRACKET_OPEN -> OpKind.Index
+                Token.PAREN_OPEN -> OpKind.FnCall
 
                 else -> {
                     checkOpChain(ctx.opChain)
@@ -925,7 +940,17 @@ private class Parser(val src: Source, val diag: Diag) {
                     spanned(span(), Expr.Selector(left, name))
                 }
                 is OpKind.Unary -> unaryOp(span, opKind.value, left, nextCtx)
-                OpKind.FnCall -> TODO()
+                OpKind.FnCall -> {
+                    val args = mutableListOf<Expr.FnCall.Arg>()
+                    lex.withNlMode(Lexer.NlMode.SKIP) {
+                        commaDelimited(Token.PAREN_OPEN, Token.PAREN_CLOSE) {
+                            val label = fnArgLabel()
+                            val value = expr()
+                            args.add(Expr.FnCall.Arg(label, value))
+                        }
+                    }
+                    spanned(span(), Expr.FnCall(Expr.FnCall.Callee.Free(left), args))
+                }
                 OpKind.Index -> {
                     lex.next().also { check(it.value == Token.BRACKET_OPEN) }
                     val index = lex.withNlMode(Lexer.NlMode.SKIP) { expr() }

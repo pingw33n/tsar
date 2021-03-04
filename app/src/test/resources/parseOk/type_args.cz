@@ -26,7 +26,7 @@ fn f() {
     >.0
     T<U, V, T<U, V>>[T<U, V, T<U, V>,>]
 
-    //TODO T<U, V>()
+    //______________
     //TODO T<U, V>{}
 
     (T<U, V>)
@@ -35,6 +35,8 @@ fn f() {
     (T<U, V>0)
     (T<U,)
     (T<U>,)
+
+    T<U, V>()
 
     //TODO path<>::to<T, Inner<>>::f<T<>, U<>> {} << path<>::to<T, Inner<>>::f<T<U<>>, V<>>();
     //TODO path<>::to<T, Inner<>>::f<T<>, U<>> {} > path<>::to<T, Inner<>>::f<T<U<>>, V<>>();

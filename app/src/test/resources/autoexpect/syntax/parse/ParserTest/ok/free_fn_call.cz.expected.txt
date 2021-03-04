@@ -1,0 +1,157 @@
+@(0..88) {
+  source: "parseOk/free_fn_call.cz"
+  items: [
+    FnDef @(0..88) {
+      name: @(3..4) `f`
+      body: [
+        Expr {
+          FnCall @(13..16) {
+            callee: Free {
+              Path @(13..14) {
+                @(13..14) {
+                  suffix: [
+                    Item @(13..14) {
+                      item: @(13..14) {
+                        name: @(13..14) `f`
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+        Expr {
+          FnCall @(21..26) {
+            callee: Free {
+              Path @(21..24) {
+                @(21..24) {
+                  suffix: [
+                    Item @(21..24) {
+                      item: @(21..24) {
+                        name: @(21..22) `f`
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+        Expr {
+          FnCall @(31..54) {
+            callee: Free {
+              Path @(31..32) {
+                @(31..32) {
+                  suffix: [
+                    Item @(31..32) {
+                      item: @(31..32) {
+                        name: @(31..32) `f`
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+            args: [
+              {
+                value: Int @(33..35) {
+                  `42`
+                }
+              }
+              {
+                value: FnCall @(37..53) {
+                  callee: Free {
+                    Path @(37..51) {
+                      @(37..51) {
+                        prefix: [
+                          @(37..40) {
+                            name: @(37..40) `foo`
+                          }
+                          @(42..48) {
+                            name: @(42..45) `bar`
+                            typeArgs: [
+                              Path @(46..47) {
+                                @(46..47) {
+                                  suffix: [
+                                    Item @(46..47) {
+                                      item: @(46..47) {
+                                        name: @(46..47) `T`
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                        suffix: [
+                          Item @(50..51) {
+                            item: @(50..51) {
+                              name: @(50..51) `f`
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+        Expr {
+          FnCall @(59..86) {
+            callee: Free {
+              Path @(59..60) {
+                @(59..60) {
+                  suffix: [
+                    Item @(59..60) {
+                      item: @(59..60) {
+                        name: @(59..60) `f`
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+            args: [
+              {
+                label: @(61..64) `foo`
+                value: Path @(66..69) {
+                  @(66..69) {
+                    suffix: [
+                      Item @(66..69) {
+                        item: @(66..69) {
+                          name: @(66..69) `foo`
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+              {
+                value: Path @(71..74) {
+                  @(71..74) {
+                    suffix: [
+                      Item @(71..74) {
+                        item: @(71..74) {
+                          name: @(71..74) `bar`
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+              {
+                label: @(76..81) `break`
+                value: FnCall @(83..85) {
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
