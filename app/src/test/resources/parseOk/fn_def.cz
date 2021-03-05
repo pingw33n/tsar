@@ -51,3 +51,10 @@ fn f(
 ) {}
 
 fn f(&self) {}
+
+fn f(foo: u32 = (), bar: Foo = 42
+    + 100
+    / 10000
+    ,
+    _ baz: T = do { a;b;c },
+    p: T = f()) {}

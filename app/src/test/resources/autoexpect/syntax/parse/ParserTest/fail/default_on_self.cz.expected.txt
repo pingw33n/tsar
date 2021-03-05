@@ -1,0 +1,4 @@
+error: expected `,`, found `=`
+  --> default_on_self.cz:1:11
+1 | fn f(self = 42) {}
+              ~

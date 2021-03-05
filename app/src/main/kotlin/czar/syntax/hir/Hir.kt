@@ -86,6 +86,7 @@ data class FnParam(
     val label: S<Ident>?,
     val name: S<Ident>,
     val type: TypeExpr,
+    val default: Expr?,
 ): Node()
 
 data class LetDef(

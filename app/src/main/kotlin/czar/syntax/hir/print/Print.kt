@@ -93,12 +93,13 @@ private class PrinterImpl(val hir: Hir, val relativizePath: java.nio.file.Path?,
 
         list("params", items = params) {
             obj(span = span(it)) {
-                val (label, pName, type) = it
+                val (label, pName, type, default) = it
                 if (label != null) {
                     entry("label", span = label.span, value = Value.Literal(label.value.value))
                 }
                 ident("name", pName)
                 typeExpr("type", type)
+                expr("default", default)
             }
         }
 
@@ -123,9 +124,7 @@ private class PrinterImpl(val hir: Hir, val relativizePath: java.nio.file.Path?,
                 is TypeExpr.Ref -> typeExpr(value = value.value)
                 is TypeExpr.Slice -> {
                     typeExpr("item", value.item)
-                    if (value.len != null) {
-                        expr("len", value.len)
-                    }
+                    expr("len", value.len)
                     Unit
                 }
                 is TypeExpr.UnnamedStruct -> {
@@ -142,7 +141,10 @@ private class PrinterImpl(val hir: Hir, val relativizePath: java.nio.file.Path?,
         }
     }
 
-    private fun expr(field: String? = null, value: Expr) {
+    private fun expr(field: String? = null, value: Expr?) {
+        if (value == null) {
+            return
+        }
         obj(field, value::class, span(value)) {
             when (value) {
                 is Expr.As -> {
@@ -195,13 +197,8 @@ private class PrinterImpl(val hir: Hir, val relativizePath: java.nio.file.Path?,
                     if (inclusive != null) {
                         entry("inclusive", span = inclusive.span)
                     }
-                    if (start != null) {
-                        expr("start", start)
-                    }
-                    if (end != null) {
-                        expr("end", end)
-                    }
-                    Unit
+                    expr("start", start)
+                    expr("end", end)
                 }
                 is Expr.Selector -> {
                     val (v, name) = value

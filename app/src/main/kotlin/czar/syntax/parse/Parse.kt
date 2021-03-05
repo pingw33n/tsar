@@ -618,13 +618,18 @@ private class Parser(val src: Source, val diag: Diag) {
                     selfType
                 }
 
-                FnParam(label, paramName, type)
+                FnParam(label, paramName, type, default = null)
             } else {
                 val label = fnParamLabel()
                 val paramName = ident()
                 expect(Token.COLON)
                 val type = typeExpr()
-                FnParam(label, paramName, type)
+                val default = if (maybe(Token.EQ) != null) {
+                    expr()
+                } else {
+                    null
+                }
+                FnParam(label, paramName, type, default)
             }
             params.add(spanned(paramSpan(), node))
         }
