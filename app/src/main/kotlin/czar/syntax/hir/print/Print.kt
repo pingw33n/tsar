@@ -125,10 +125,9 @@ private class PrinterImpl(val hir: Hir, val relativizePath: java.nio.file.Path?,
                 is TypeExpr.Slice -> {
                     typeExpr("item", value.item)
                     expr("len", value.len)
-                    Unit
                 }
                 is TypeExpr.UnnamedStruct -> {
-                    list("fields", items = value.value.fields) { it ->
+                    list("fields", items = value.value.fields) {
                         obj {
                             val (pub, name, type) = it
                             pub(pub)
