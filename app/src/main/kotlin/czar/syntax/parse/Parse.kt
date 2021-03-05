@@ -8,6 +8,7 @@ import czar.syntax.S
 import czar.syntax.Source
 import czar.syntax.Span
 import czar.syntax.hir.*
+import czar.unreachable
 
 enum class Token {
     AMP,
@@ -569,8 +570,20 @@ private class Parser(val src: Source, val diag: Diag) {
             isPrefix(Token.KW_PUB, Token.KW_UNSAFE, Token.KW_FN)
             -> fnDef()
 
+            isPrefix(Token.KW_USE) ||
+            isPrefix(Token.KW_PUB, Token.KW_USE)
+            -> import()
+
             else -> null
         }
+    }
+
+    private fun import(): Import {
+        val span = spanner()
+        val pub = maybePub()
+        lex.next().also { check(it.value == Token.KW_USE) }
+        val path = path(PathPlace.IMPORT)
+        return spanned(span(), Import(pub, path))
     }
 
     private fun maybePub(): S<Pub>? {
@@ -715,9 +728,13 @@ private class Parser(val src: Source, val diag: Diag) {
         val span = spanner()
         val path = maybePath(PathPlace.TYPE)
         val node = if (path == null) {
-            when {
-                maybe(Token.AMP) != null -> TypeExpr.Ref(typeExpr())
-                maybe(Token.BRACKET_OPEN) != null -> {
+            when (lex.at(0).value) {
+                Token.AMP -> {
+                    lex.next()
+                    TypeExpr.Ref(typeExpr())
+                }
+                Token.BRACKET_OPEN -> {
+                    lex.next()
                     val item = typeExpr()
                     val len = if (maybe(Token.SEMI) != null) {
                         maybeExpr()
@@ -727,7 +744,7 @@ private class Parser(val src: Source, val diag: Diag) {
                     expect(Token.BRACKET_CLOSE)
                     TypeExpr.Slice(item, len)
                 }
-                isPrefix(Token.PAREN_OPEN) -> {
+                Token.PAREN_OPEN -> {
                     val fields = mutableListOf<StructBody.Field>()
                     val record = isPrefix(Token.PAREN_OPEN, Token.IDENT, Token.COLON)
                     val hadTrailingComma = commaDelimited(Token.PAREN_OPEN, Token.PAREN_CLOSE) {
@@ -943,9 +960,9 @@ private class Parser(val src: Source, val diag: Diag) {
                     val args = fnCallArgs()
                     spanned(span(), Expr.FnCall(Expr.FnCall.Callee.Free(left), args))
                 }
-                OpKind.Index -> {
+                OpKind.Index -> lex.withNlMode(Lexer.NlMode.SKIP) {
                     lex.next().also { check(it.value == Token.BRACKET_OPEN) }
-                    val index = lex.withNlMode(Lexer.NlMode.SKIP) { expr() }
+                    val index = expr()
                     expect(Token.BRACKET_CLOSE)
                     spanned(span(), Expr.Index(left, index))
                 }
@@ -990,12 +1007,10 @@ private class Parser(val src: Source, val diag: Diag) {
 
     private fun fnCallArgs(): MutableList<Expr.FnCall.Arg> {
         val args = mutableListOf<Expr.FnCall.Arg>()
-        lex.withNlMode(Lexer.NlMode.SKIP) {
-            commaDelimited(Token.PAREN_OPEN, Token.PAREN_CLOSE) {
-                val label = fnArgLabel()
-                val value = expr()
-                args.add(Expr.FnCall.Arg(label, value))
-            }
+        commaDelimited(Token.PAREN_OPEN, Token.PAREN_CLOSE) {
+            val label = fnArgLabel()
+            val value = expr()
+            args.add(Expr.FnCall.Arg(label, value))
         }
         return args
     }
@@ -1135,6 +1150,10 @@ private class Parser(val src: Source, val diag: Diag) {
         return spanned(span(), Expr.UnaryOp(S(kindSpan, kind), argu))
     }
 
+    private fun path(place: PathPlace): Path {
+        return maybePath(place) ?: unexpected(lex.at(0), "path")
+    }
+
     private fun maybePath(place: PathPlace): Path? {
         val span = spanner()
         val origin: S<Path.Origin>? = when (lex.at(0).value) {
@@ -1150,17 +1169,13 @@ private class Parser(val src: Source, val diag: Diag) {
             Token.KW_PACKAGE -> {
                 lex.next()
 
-                val name = if (maybe(Token.PAREN_OPEN) != null) {
-                    val r = ident()
-                    expect(Token.PAREN_CLOSE)
-                    r.value
-                } else {
-                    null
-                }
+                expect(Token.PAREN_OPEN)
+                val name = ident()
+                expect(Token.PAREN_CLOSE)
 
                 expect(Token.COLON2)
 
-                Path.Origin.Package(name)
+                Path.Origin.Package(name.value)
             }
             Token.KW_SUPER -> {
                 lex.next()
@@ -1186,7 +1201,7 @@ private class Parser(val src: Source, val diag: Diag) {
         while (true) {
             val suffixItem = maybePathSuffixItem(place, inBraces = false)
             if (suffixItem == null) {
-                if (maybe(Token.BRACE_OPEN) != null) {
+                if (place == PathPlace.IMPORT && lex.at(0).value == Token.BRACE_OPEN) {
                     commaDelimited(Token.BRACE_OPEN, Token.BRACE_CLOSE) {
                         suffix.add(pathSuffixItem(place, inBraces = true))
                     }
@@ -1282,10 +1297,8 @@ private class Parser(val src: Source, val diag: Diag) {
         }
         try {
             val r = mutableListOf<TypeExpr>()
-            lex.withNlMode(Lexer.NlMode.SKIP) {
-                commaDelimited(Token.LT, Token.GT) {
-                    r.add(typeExpr())
-                }
+            commaDelimited(Token.LT, Token.GT) {
+                r.add(typeExpr())
             }
             val ok = !inExprPos || checkpointed.state.newErrorCount == 0 &&
                 when (lex.at(0).value) {
@@ -1325,20 +1338,23 @@ private class Parser(val src: Source, val diag: Diag) {
 
     private fun commaDelimited(start: Token, end: Token, f: () -> Unit): Boolean? {
         maybe(start) ?: return null
-        if (maybeSplit(end) != null) {
-            return false
-        }
-        while (true) {
-            f()
-
-            val comma = maybe(Token.COMMA) != null
+        lex.withNlMode(Lexer.NlMode.SKIP) {
             if (maybeSplit(end) != null) {
-                return comma
+                return false
             }
-            if (!comma) {
-                unexpected(lex.at(0), Token.COMMA)
+            while (true) {
+                f()
+
+                val comma = maybe(Token.COMMA) != null
+                if (maybeSplit(end) != null) {
+                    return comma
+                }
+                if (!comma) {
+                    unexpected(lex.at(0), Token.COMMA)
+                }
             }
         }
+        unreachable()
     }
 
     private fun typeParams(): List<S<Ident>> {

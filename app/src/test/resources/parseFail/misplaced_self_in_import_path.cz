@@ -1,0 +1,5 @@
+use self
+use self::self
+use foo::self
+use foo::self::bar
+use foo::self as foo

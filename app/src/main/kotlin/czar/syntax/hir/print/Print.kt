@@ -71,9 +71,15 @@ private class PrinterImpl(val hir: Hir, val relativizePath: java.nio.file.Path?,
                 is Module -> TODO()
                 is StructDef -> TODO()
                 is TypeAlias -> TODO()
-                is Use -> TODO()
+                is Import -> import(value)
             }::class.java
         }
+    }
+
+    private fun import(value: Import) {
+        val (pub, path) = value
+        pub(pub)
+        path("path", path)
     }
 
     private fun fnDef(fnDef: FnDef) {
@@ -252,18 +258,19 @@ private class PrinterImpl(val hir: Hir, val relativizePath: java.nio.file.Path?,
                 pathItem(value = it)
             }
             list("suffix", items = suffix) { item ->
-                when (item.value) {
-                    is Path.SuffixItem.Item -> {
-                        obj(type = item.value::class, span = item.span) {
+                obj(type = item.value::class, span = item.span) {
+                    when (item.value) {
+                        is Path.SuffixItem.Item -> {
                             val (it, renamedAs) = item.value
                             pathItem("item", it)
                             if (renamedAs != null) {
                                 ident("renamedAs", renamedAs)
                             }
+                            Unit
                         }
-                    }
-                    Path.SuffixItem.Star -> entry(type = item::class, span = item.span)
-                }::class
+                        Path.SuffixItem.Star -> {}
+                    }::class
+                }
             }
         }
     }
@@ -325,7 +332,7 @@ private class PrinterImpl(val hir: Hir, val relativizePath: java.nio.file.Path?,
     }
 
     private fun entry(field: String? = null, type: KClass<*>? = null, span: Span? = null, value: Value? = null) {
-        check(field != null || type != null || value != null)
+        check(field != null || type != null || span != null || value != null)
         beginLine()
 
         if (field != null) {

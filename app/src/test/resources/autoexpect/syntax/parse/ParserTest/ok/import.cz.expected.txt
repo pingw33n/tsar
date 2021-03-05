@@ -1,0 +1,460 @@
+@(0..598) {
+  source: "parseOk/import.cz"
+  items: [
+    Import @(0..7) {
+      path: @(4..7) {
+        suffix: [
+          Item @(4..7) {
+            item: @(4..7) {
+              name: @(4..7) `foo`
+            }
+          }
+        ]
+      }
+    }
+    Import @(8..20) {
+      path: @(12..20) {
+        prefix: [
+          @(12..15) {
+            name: @(12..15) `foo`
+          }
+        ]
+        suffix: [
+          Item @(17..20) {
+            item: @(17..20) {
+              name: @(17..20) `bar`
+            }
+          }
+        ]
+      }
+    }
+    Import @(21..42) {
+      path: @(25..42) {
+        prefix: [
+          @(25..28) {
+            name: @(25..28) `foo`
+          }
+        ]
+        suffix: [
+          Item @(32..42) {
+            item: @(32..42) {
+              name: @(32..35) `bar`
+            }
+            renamedAs: @(39..42) `Baz`
+          }
+        ]
+      }
+    }
+    Import @(43..60) {
+      path: @(47..60) {
+        prefix: [
+          @(47..50) {
+            name: @(47..50) `foo`
+          }
+          @(54..57) {
+            name: @(54..57) `bar`
+          }
+        ]
+        suffix: [
+          Star @(59..60) {
+          }
+        ]
+      }
+    }
+    Import @(62..71) {
+      path: @(66..71) {
+        origin: Package @(66..68) {
+        }
+        suffix: [
+          Item @(68..71) {
+            item: @(68..71) {
+              name: @(68..71) `foo`
+            }
+          }
+        ]
+      }
+    }
+    Import @(72..86) {
+      path: @(76..86) {
+        origin: Package @(76..78) {
+        }
+        prefix: [
+          @(78..81) {
+            name: @(78..81) `foo`
+          }
+        ]
+        suffix: [
+          Item @(83..86) {
+            item: @(83..86) {
+              name: @(83..86) `bar`
+            }
+          }
+        ]
+      }
+    }
+    Import @(88..109) {
+      path: @(92..109) {
+        origin: Package @(92..106) {
+          name: `std`
+        }
+        suffix: [
+          Item @(106..109) {
+            item: @(106..109) {
+              name: @(106..109) `foo`
+            }
+          }
+        ]
+      }
+    }
+    Import @(110..125) {
+      path: @(114..125) {
+        origin: Module @(114..122) {
+        }
+        suffix: [
+          Item @(122..125) {
+            item: @(122..125) {
+              name: @(122..125) `foo`
+            }
+          }
+        ]
+      }
+    }
+    Import @(126..140) {
+      path: @(130..140) {
+        origin: Super @(130..137) {
+          count: `1`
+        }
+        suffix: [
+          Item @(137..140) {
+            item: @(137..140) {
+              name: @(137..140) `foo`
+            }
+          }
+        ]
+      }
+    }
+    Import @(141..164) {
+      path: @(145..164) {
+        origin: Super @(145..160) {
+          count: `2`
+        }
+        suffix: [
+          Item @(161..164) {
+            item: @(161..164) {
+              name: @(161..164) `bar`
+            }
+          }
+        ]
+      }
+    }
+    Import @(166..201) {
+      path: @(170..201) {
+        prefix: [
+          @(170..173) {
+            name: @(170..173) `foo`
+          }
+        ]
+        suffix: [
+          Item @(176..180) {
+            item: @(176..180) {
+              name: @(176..180) `self`
+            }
+          }
+          Star @(182..183) {
+          }
+          Item @(185..188) {
+            item: @(185..188) {
+              name: @(185..188) `bar`
+            }
+          }
+          Item @(190..200) {
+            item: @(190..200) {
+              name: @(190..193) `baz`
+            }
+            renamedAs: @(197..200) `Baz`
+          }
+        ]
+      }
+    }
+    Import @(202..242) {
+      path: @(206..242) {
+        prefix: [
+          @(206..209) {
+            name: @(206..209) `foo`
+          }
+        ]
+        suffix: [
+          Item @(219..223) {
+            item: @(219..223) {
+              name: @(219..223) `self`
+            }
+          }
+          Star @(229..230) {
+          }
+          Item @(236..239) {
+            item: @(236..239) {
+              name: @(236..239) `bar`
+            }
+          }
+        ]
+      }
+    }
+    Import @(244..256) {
+      path: @(248..256) {
+        prefix: [
+          @(248..251) {
+            name: @(248..251) `foo`
+          }
+        ]
+        suffix: [
+          Item @(253..256) {
+            item: @(253..256) {
+              name: @(253..256) `bar`
+            }
+          }
+        ]
+      }
+    }
+    FnDef @(258..598) {
+      name: @(261..262) `f`
+      body: [
+        ModuleItem {
+          Import @(271..278) {
+            path: @(275..278) {
+              suffix: [
+                Item @(275..278) {
+                  item: @(275..278) {
+                    name: @(275..278) `foo`
+                  }
+                }
+              ]
+            }
+          }
+        }
+        ModuleItem {
+          Import @(283..295) {
+            path: @(287..295) {
+              prefix: [
+                @(287..290) {
+                  name: @(287..290) `foo`
+                }
+              ]
+              suffix: [
+                Item @(292..295) {
+                  item: @(292..295) {
+                    name: @(292..295) `bar`
+                  }
+                }
+              ]
+            }
+          }
+        }
+        ModuleItem {
+          Import @(300..315) {
+            path: @(304..315) {
+              prefix: [
+                @(304..307) {
+                  name: @(304..307) `foo`
+                }
+                @(309..312) {
+                  name: @(309..312) `bar`
+                }
+              ]
+              suffix: [
+                Star @(314..315) {
+                }
+              ]
+            }
+          }
+        }
+        ModuleItem {
+          Import @(321..330) {
+            path: @(325..330) {
+              origin: Package @(325..327) {
+              }
+              suffix: [
+                Item @(327..330) {
+                  item: @(327..330) {
+                    name: @(327..330) `foo`
+                  }
+                }
+              ]
+            }
+          }
+        }
+        ModuleItem {
+          Import @(335..349) {
+            path: @(339..349) {
+              origin: Package @(339..341) {
+              }
+              prefix: [
+                @(341..344) {
+                  name: @(341..344) `foo`
+                }
+              ]
+              suffix: [
+                Item @(346..349) {
+                  item: @(346..349) {
+                    name: @(346..349) `bar`
+                  }
+                }
+              ]
+            }
+          }
+        }
+        ModuleItem {
+          Import @(355..376) {
+            path: @(359..376) {
+              origin: Package @(359..373) {
+                name: `std`
+              }
+              suffix: [
+                Item @(373..376) {
+                  item: @(373..376) {
+                    name: @(373..376) `foo`
+                  }
+                }
+              ]
+            }
+          }
+        }
+        ModuleItem {
+          Import @(381..396) {
+            path: @(385..396) {
+              origin: Module @(385..393) {
+              }
+              suffix: [
+                Item @(393..396) {
+                  item: @(393..396) {
+                    name: @(393..396) `foo`
+                  }
+                }
+              ]
+            }
+          }
+        }
+        ModuleItem {
+          Import @(401..415) {
+            path: @(405..415) {
+              origin: Super @(405..412) {
+                count: `1`
+              }
+              suffix: [
+                Item @(412..415) {
+                  item: @(412..415) {
+                    name: @(412..415) `foo`
+                  }
+                }
+              ]
+            }
+          }
+        }
+        ModuleItem {
+          Import @(420..439) {
+            path: @(424..439) {
+              origin: Super @(424..431) {
+                count: `1`
+              }
+              prefix: [
+                @(431..434) {
+                  name: @(431..434) `foo`
+                }
+              ]
+              suffix: [
+                Item @(436..439) {
+                  item: @(436..439) {
+                    name: @(436..439) `bar`
+                  }
+                }
+              ]
+            }
+          }
+        }
+        ModuleItem {
+          Import @(445..468) {
+            path: @(449..468) {
+              prefix: [
+                @(449..452) {
+                  name: @(449..452) `foo`
+                }
+              ]
+              suffix: [
+                Item @(455..459) {
+                  item: @(455..459) {
+                    name: @(455..459) `self`
+                  }
+                }
+                Star @(461..462) {
+                }
+                Item @(464..467) {
+                  item: @(464..467) {
+                    name: @(464..467) `bar`
+                  }
+                }
+              ]
+            }
+          }
+        }
+        ModuleItem {
+          Import @(473..573) {
+            path: @(477..573) {
+              prefix: [
+                @(477..480) {
+                  name: @(477..480) `foo`
+                }
+              ]
+              suffix: [
+                Item @(494..498) {
+                  item: @(494..498) {
+                    name: @(494..498) `self`
+                  }
+                }
+                Star @(508..509) {
+                }
+                Item @(519..522) {
+                  item: @(519..522) {
+                    name: @(519..522) `bar`
+                  }
+                }
+                Item @(532..566) {
+                  item: @(532..566) {
+                    name: @(532..535) `baz`
+                  }
+                  renamedAs: @(563..566) `Baz`
+                }
+              ]
+            }
+          }
+        }
+        ModuleItem {
+          Import @(579..586) {
+            path: @(583..586) {
+              suffix: [
+                Item @(583..586) {
+                  item: @(583..586) {
+                    name: @(583..586) `foo`
+                  }
+                }
+              ]
+            }
+          }
+        }
+        Expr {
+          Path @(591..596) {
+            @(591..596) {
+              origin: Package @(591..593) {
+              }
+              suffix: [
+                Item @(593..596) {
+                  item: @(593..596) {
+                    name: @(593..596) `bar`
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

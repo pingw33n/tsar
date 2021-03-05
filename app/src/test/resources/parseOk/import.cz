@@ -1,0 +1,48 @@
+use foo
+use foo::bar
+use foo :: bar as Baz
+use foo :: bar::*
+
+use ::foo
+use ::foo::bar
+
+use package(std)::foo
+use module::foo
+use super::foo
+use super::super :: bar
+
+use foo::{self, *, bar, baz as Baz}
+use foo :: {
+    self,
+    *,
+    bar,
+}
+
+use foo::bar
+
+fn f() {
+    use foo
+    use foo::bar
+    use foo::bar::*
+
+    use ::foo
+    use ::foo::bar
+
+    use package(std)::foo
+    use module::foo
+    use super::foo
+    use super::foo::bar
+
+    use foo::{self, *, bar}
+    use foo :: {
+        self,
+        *,
+        bar,
+        baz
+            as
+            Baz,
+    }
+
+    use foo
+    ::bar
+}

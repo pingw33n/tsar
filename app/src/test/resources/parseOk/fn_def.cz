@@ -33,7 +33,7 @@ fn foo_bar<
     V
     >>,
     _ p3: super::super::bar<T>::T<>,
-    ) -> package::test::R
+    ) -> package(std)::test::R
 {
 }
 

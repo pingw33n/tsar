@@ -129,7 +129,6 @@ data class Path(
 ): Node() {
     sealed class Origin {
         // ::foo
-        // package::foo
         // package(bar)::foo
         data class Package(val name: Ident?): Origin()
 
@@ -390,7 +389,7 @@ data class StructLiteralField(
     val value: Expr,
 ): Node()
 
-data class Use(
+data class Import(
     val pub: S<Pub>?,
     val path: Path,
 ): ModuleItem()

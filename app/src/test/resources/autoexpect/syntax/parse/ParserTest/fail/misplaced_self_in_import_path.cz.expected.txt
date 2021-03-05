@@ -1,0 +1,29 @@
+error: `self` imports are only allowed within a { } list
+  --> misplaced_self_in_import_path.cz:1:5
+1 | use self
+        ~~~~
+
+error: `self` imports are only allowed within a { } list
+  --> misplaced_self_in_import_path.cz:2:5
+2 | use self::self
+        ~~~~
+
+error: `self` imports are only allowed within a { } list
+  --> misplaced_self_in_import_path.cz:2:11
+2 | use self::self
+              ~~~~
+
+error: `self` imports are only allowed within a { } list
+  --> misplaced_self_in_import_path.cz:3:10
+3 | use foo::self
+             ~~~~
+
+error: `self` imports are only allowed within a { } list
+  --> misplaced_self_in_import_path.cz:4:10
+4 | use foo::self::bar
+             ~~~~
+
+error: `self` imports are only allowed within a { } list
+  --> misplaced_self_in_import_path.cz:5:10
+5 | use foo::self as foo
+             ~~~~
