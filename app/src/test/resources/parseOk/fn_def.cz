@@ -46,7 +46,7 @@ fn f(
   self,
   _ unnamed: u32,
   arg1: u32,
-  fn name: u32,
+  f name: u32,
   _ unnamed2: u32,
 ) {}
 

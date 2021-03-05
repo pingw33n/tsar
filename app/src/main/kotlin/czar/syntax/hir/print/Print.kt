@@ -94,9 +94,7 @@ private class PrinterImpl(val hir: Hir, val relativizePath: java.nio.file.Path?,
         list("params", items = params) {
             obj(span = span(it)) {
                 val (label, pName, type, default) = it
-                if (label != null) {
-                    entry("label", span = label.span, value = Value.Literal(label.value.value))
-                }
+                entry("label", span = label.span, value = label.value?.value?.let { v -> Value.Literal(v) })
                 ident("name", pName)
                 typeExpr("type", type)
                 expr("default", default)

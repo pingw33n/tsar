@@ -1,7 +1,7 @@
-@(0..88) {
+@(0..87) {
   source: "parseOk/free_fn_call.cz"
   items: [
-    FnDef @(0..88) {
+    FnDef @(0..87) {
       name: @(3..4) `f`
       body: [
         Expr {
@@ -101,7 +101,7 @@
           }
         }
         Expr {
-          FnCall @(59..86) {
+          FnCall @(59..85) {
             callee: Free {
               Path @(59..60) {
                 @(59..60) {
@@ -144,8 +144,8 @@
                 }
               }
               {
-                label: @(76..81) `break`
-                value: FnCall @(83..85) {
+                label: @(76..80) `self`
+                value: FnCall @(82..84) {
                 }
               }
             ]

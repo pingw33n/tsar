@@ -2,5 +2,5 @@ fn f() {
     f()
     f<>()
     f(42, foo::bar<T>::f())
-    f(foo: foo, bar, break: ())
+    f(foo: foo, bar, self: ())
 }

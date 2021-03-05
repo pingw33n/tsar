@@ -83,7 +83,7 @@ data class FnDef(
 ): ModuleItem()
 
 data class FnParam(
-    val label: S<Ident>?,
+    val label: S<Ident?>,
     val name: S<Ident>,
     val type: TypeExpr,
     val default: Expr?,

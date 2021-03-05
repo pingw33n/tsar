@@ -606,8 +606,6 @@ private class Parser(val src: Source, val diag: Diag) {
                     Ident.SELF_LOWER
                 }
 
-                val label = paramName.map { Ident.SELF_LOWER }
-
                 val selfSpan = paramName.span
                 val selfPath = spanned(selfSpan, Path.of(S(selfSpan, Ident.SELF_UPPER)))
                 val selfType = spanned(selfSpan, TypeExpr.Path(selfPath))
@@ -618,10 +616,9 @@ private class Parser(val src: Source, val diag: Diag) {
                     selfType
                 }
 
-                FnParam(label, paramName, type, default = null)
+                FnParam(paramName.map { Ident.SELF_LOWER }, paramName, type, default = null)
             } else {
-                val label = fnParamLabel()
-                val paramName = ident()
+                val (label, paramName) = fnLabelParamName()
                 expect(Token.COLON)
                 val type = typeExpr()
                 val default = if (maybe(Token.EQ) != null) {
@@ -651,37 +648,32 @@ private class Parser(val src: Source, val diag: Diag) {
         return spanned(span(), FnDef(pub, name, typeParams, params, result, unsafe, body, variadic = false))
     }
 
-    private fun fnParamLabel(): S<Ident>? {
-        if (lex.at(1).value != Token.IDENT) {
-            return null
+    private fun fnLabelParamName(): Pair<S<Ident?>, S<Ident>> {
+        return when (lex.at(0).value) {
+            Token.IDENT -> {
+                val first = ident()
+                val second = maybeIdent()
+                Pair(first.map { it }, second ?: first)
+            }
+            Token.KW_UNDERSCORE -> {
+                Pair(lex.next().map { null }, ident())
+            }
+            else -> unexpected(lex.at(0), Token.IDENT, Token.KW_UNDERSCORE)
         }
-        return identOrKeyword()
     }
 
     private fun fnArgLabel(): S<Ident>? {
         if (lex.at(1).value != Token.COLON) {
             return null
         }
-        val r = identOrKeyword()
-        if (r != null) {
-            lex.next()
-        }
-        return r
-    }
 
-    private fun identOrKeyword(): S<Ident>? {
-        val tok = lex.at(0)
-        return when {
-            tok.value == Token.IDENT -> {
-                ident()
-            }
-            tok.value.isKeyword() -> {
-                lex.next().map { Ident(it.toString()) }
-            }
-            else -> {
-                null
-            }
+        val r = when (lex.at(0).value) {
+            Token.IDENT -> ident()
+            Token.KW_SELF_LOWER -> S(lex.next().span, Ident.SELF_LOWER)
+            else -> return null
         }
+        lex.next()
+        return r
     }
 
     private fun block(): Expr.Block {
