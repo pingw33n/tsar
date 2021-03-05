@@ -1,0 +1,169 @@
+@(0..149) {
+  source: "parseOk/do_block.cz"
+  items: [
+    FnDef @(0..149) {
+      name: @(3..4) `f`
+      body: [
+        Expr {
+          Block @(16..18) {
+          }
+        }
+        Expr {
+          Block @(26..35) {
+            [
+              Expr {
+                Int @(27..28) {
+                  `1`
+                }
+              }
+              Expr {
+                Path @(29..30) {
+                  @(29..30) {
+                    suffix: [
+                      Item @(29..30) {
+                        item: @(29..30) {
+                          name: @(29..30) `b`
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+              Expr {
+                FnCall @(31..34) {
+                  callee: Free {
+                    Path @(31..32) {
+                      @(31..32) {
+                        suffix: [
+                          Item @(31..32) {
+                            item: @(31..32) {
+                              name: @(31..32) `f`
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+        Expr {
+          Block @(43..82) {
+            [
+              Expr {
+                Int @(53..54) {
+                  `1`
+                }
+              }
+              Expr {
+                Path @(63..64) {
+                  @(63..64) {
+                    suffix: [
+                      Item @(63..64) {
+                        item: @(63..64) {
+                          name: @(63..64) `b`
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+              Expr {
+                FnCall @(73..76) {
+                  callee: Free {
+                    Path @(73..74) {
+                      @(73..74) {
+                        suffix: [
+                          Item @(73..74) {
+                            item: @(73..74) {
+                              name: @(73..74) `f`
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+        Expr {
+          BinaryOp @(87..147) {
+            kind: @(89..90) `ASSIGN`
+            left: Path @(87..88) {
+              @(87..88) {
+                suffix: [
+                  Item @(87..88) {
+                    item: @(87..88) {
+                      name: @(87..88) `z`
+                    }
+                  }
+                ]
+              }
+            }
+            right: BinaryOp @(91..147) {
+              kind: @(131..132) `DIV`
+              left: BinaryOp @(92..129) {
+                kind: @(102..103) `ADD`
+                left: Block @(95..101) {
+                  [
+                    Expr {
+                      Int @(97..99) {
+                        `42`
+                      }
+                    }
+                  ]
+                }
+                right: Block @(107..129) {
+                  [
+                    Expr {
+                      BinaryOp @(109..127) {
+                        kind: @(115..116) `ADD`
+                        left: Path @(109..114) {
+                          @(109..114) {
+                            suffix: [
+                              Item @(109..114) {
+                                item: @(109..114) {
+                                  name: @(109..114) `stuff`
+                                }
+                              }
+                            ]
+                          }
+                        }
+                        right: Int @(125..127) {
+                          `42`
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+              right: Block @(136..147) {
+                [
+                  Expr {
+                    Int @(138..139) {
+                      `1`
+                    }
+                  }
+                  Expr {
+                    Int @(141..142) {
+                      `2`
+                    }
+                  }
+                  Expr {
+                    Int @(144..145) {
+                      `3`
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

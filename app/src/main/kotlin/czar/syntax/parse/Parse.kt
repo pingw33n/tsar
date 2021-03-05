@@ -52,6 +52,7 @@ enum class Token {
     KW_BREAK,
     KW_CONST,
     KW_CONTINUE,
+    KW_DO,
     KW_ELSE,
     KW_ENUM,
     KW_FALSE,
@@ -121,6 +122,7 @@ enum class Token {
         KW_BREAK,
         KW_CONST,
         KW_CONTINUE,
+        KW_DO,
         KW_ELSE,
         KW_ENUM,
         KW_FALSE,
@@ -260,6 +262,7 @@ enum class Token {
             KW_BREAK -> "break"
             KW_CONST -> "const"
             KW_CONTINUE -> "continue"
+            KW_DO -> "do"
             KW_ELSE -> "else"
             KW_ENUM -> "enum"
             KW_FALSE -> "false"
@@ -676,10 +679,10 @@ private class Parser(val src: Source, val diag: Diag) {
         }
     }
 
-    private fun block(): Block {
+    private fun block(): Expr.Block {
         val span = spanner()
         expect(Token.BRACE_OPEN)
-        val items = mutableListOf<Block.Item>()
+        val items = mutableListOf<Expr.Block.Item>()
         lex.withNlMode(Lexer.NlMode.ALLOW) {
             while (true) {
                 when (lex.at(0).value) {
@@ -695,20 +698,20 @@ private class Parser(val src: Source, val diag: Diag) {
 
                 val moduleItem = moduleItem()
                 if (moduleItem != null) {
-                    items.add(Block.Item.ModuleItem(moduleItem))
+                    items.add(Expr.Block.Item.ModuleItem(moduleItem))
                     continue
                 }
 
                 val expr = maybeExpr()
                 if (expr != null) {
-                    items.add(Block.Item.Expr(expr))
+                    items.add(Expr.Block.Item.Expr(expr))
                     continue
                 }
 
                 unexpected(lex.at(0), "module item or expression")
             }
         }
-        return spanned(span(), Block(items))
+        return spanned(span(), Expr.Block(items))
     }
 
     private fun typeExpr(): TypeExpr {
@@ -843,6 +846,10 @@ private class Parser(val src: Source, val diag: Diag) {
                     expect(Token.PAREN_CLOSE)
                     firstValue
                 }
+            }
+            Token.KW_DO -> {
+                lex.next()
+                block()
             }
             else -> {
                 val path = maybePath(PathPlace.EXPR) ?: return null

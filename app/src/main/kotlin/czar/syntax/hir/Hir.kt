@@ -77,7 +77,7 @@ data class FnDef(
     val params: List<FnParam>,
     val result: TypeExpr?,
     val unsafe: S<Unit>?,
-    val body: Block?,
+    val body: Expr.Block?,
     // C interop only
     val variadic: Boolean,
 ): ModuleItem()
@@ -111,13 +111,6 @@ sealed class TypeExpr: Node() {
     // (T,)
     // (foo: T, bar: U)
     data class UnnamedStruct(val value: StructBody): TypeExpr()
-}
-
-data class Block(val items: List<Item>): Node() {
-    sealed class Item {
-        data class Expr(val value: czar.syntax.hir.Expr): Item()
-        data class ModuleItem(val value: czar.syntax.hir.ModuleItem): Item()
-    }
 }
 
 data class Path(
@@ -382,6 +375,13 @@ sealed class Expr: Node() {
     data class Let(val def: LetDef): Expr()
 
     data class Path(val value: czar.syntax.hir.Path): Expr()
+
+    data class Block(val items: List<Item>): Expr() {
+        sealed class Item {
+            data class Expr(val value: czar.syntax.hir.Expr): Item()
+            data class ModuleItem(val value: czar.syntax.hir.ModuleItem): Item()
+        }
+    }
 }
 
 data class StructLiteralField(

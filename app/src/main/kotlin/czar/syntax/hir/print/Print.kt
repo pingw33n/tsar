@@ -116,17 +116,6 @@ private class PrinterImpl(val hir: Hir, val relativizePath: java.nio.file.Path?,
         }
     }
 
-    private fun block(field: String, block: Block) {
-        list(field, items = block.items) { item ->
-            obj(type = item::class) {
-                when (item) {
-                    is Block.Item.Expr -> expr(value = item.value)
-                    is Block.Item.ModuleItem -> moduleItem(item.value)
-                }::class
-            }
-        }
-    }
-
     private fun typeExpr(field: String? = null, value: TypeExpr) {
         obj(field, value::class, span(value)) {
             when (value) {
@@ -167,6 +156,7 @@ private class PrinterImpl(val hir: Hir, val relativizePath: java.nio.file.Path?,
                     expr("left", left)
                     expr("right", right)
                 }
+                is Expr.Block -> block(value = value)
                 is Expr.Bool -> entry(value = Value.Literal(value.value.toString()))
                 is Expr.Char -> entry(value = Value.Literal("'\\u{${value.value.toString(16)}}'"))
                 is Expr.ControlFlow -> TODO()
@@ -229,6 +219,17 @@ private class PrinterImpl(val hir: Hir, val relativizePath: java.nio.file.Path?,
                 }
                 is Expr.While -> TODO()
             }::class
+        }
+    }
+
+    private fun block(field: String? = null, value: Expr.Block) {
+        list(field, items = value.items) { item ->
+            obj(type = item::class) {
+                when (item) {
+                    is Expr.Block.Item.Expr -> expr(value = item.value)
+                    is Expr.Block.Item.ModuleItem -> moduleItem(item.value)
+                }::class
+            }
         }
     }
 

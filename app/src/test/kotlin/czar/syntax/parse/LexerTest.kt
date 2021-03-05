@@ -426,6 +426,7 @@ class LexerTest {
             Token.KW_BREAK,
             Token.KW_CONST,
             Token.KW_CONTINUE,
+            Token.KW_DO,
             Token.KW_ELSE,
             Token.KW_ENUM,
             Token.KW_FALSE,

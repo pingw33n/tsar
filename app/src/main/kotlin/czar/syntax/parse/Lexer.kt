@@ -815,6 +815,7 @@ internal class Lexer(val src: Source, val diag: Diag) {
         return when (ident.value) {
             "break" -> Token.KW_BREAK
             "continue" -> Token.KW_CONTINUE
+            "do" -> Token.KW_DO
             "false" -> Token.KW_FALSE
             "fn" -> Token.KW_FN
             "for" -> Token.KW_FOR
